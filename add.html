@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add a diachronic · Expert Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=2026-07-09-gallery">
+<style>
+  /* Add-page specific layout (reuses Gallery tokens from styles.css) */
+  body.add-page{ background:var(--bg); }
+  .add-top{ position:sticky; top:0; z-index:30; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.1rem clamp(1.4rem,4vw,3rem); background:rgba(234,230,224,.85); backdrop-filter:blur(12px); border-bottom:1px solid var(--surface-alt); }
+  .add-back{ font-size:.85rem; color:var(--muted); transition:color .2s; }
+  .add-back:hover{ color:var(--accent); }
+  .add-top .who{ font-size:.72rem; color:var(--muted); }
+  .add-wrap{ max-width:760px; margin:0 auto; padding:clamp(2rem,5vw,4rem) clamp(1.4rem,5vw,2rem) 8rem; animation:appIn .6s var(--ease) both; }
+  .add-kicker{ font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:500; margin-bottom:.8rem; }
+  .add-h1{ font-size:clamp(2rem,5vw,3rem); font-weight:300; letter-spacing:-.015em; line-height:1.05; margin:0 0 .8rem; }
+  .add-intro{ font-size:1rem; font-weight:300; color:var(--muted); line-height:1.7; max-width:56ch; margin-bottom:2.6rem; }
+  .fld{ display:block; margin-bottom:1.6rem; }
+  .fld > span{ display:block; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:.5rem; }
+  .fld > span em{ font-style:normal; text-transform:none; letter-spacing:0; opacity:.7; }
+  .inp, .ta, .sel{ width:100%; border:1px solid var(--surface-alt); border-radius:var(--radius-sm); background:var(--surface); padding:.7rem .8rem; font-family:inherit; font-size:.98rem; color:var(--text); transition:border-color .2s, background .2s; }
+  .inp:focus, .ta:focus, .sel:focus{ outline:none; border-color:var(--accent); background:#fff; }
+  .ta{ resize:vertical; min-height:96px; line-height:1.6; font-weight:300; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .add-sec-head{ display:flex; align-items:baseline; justify-content:space-between; margin:2.4rem 0 1.1rem; padding-bottom:.6rem; border-bottom:1px solid var(--surface-alt); }
+  .add-sec-head h2{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:500; margin:0; }
+  .repeat-card{ background:var(--surface); border:1px solid var(--surface-alt); border-radius:var(--radius); padding:1.3rem 1.4rem; margin-bottom:1rem; position:relative; animation:swap .3s var(--ease) both; }
+  .repeat-card .rc-num{ position:absolute; top:1rem; right:1.3rem; font-size:1.8rem; font-weight:300; color:var(--surface-alt); line-height:1; }
+  .rc-del{ position:absolute; bottom:1rem; right:1.3rem; background:none; border:none; color:var(--muted); font-size:.75rem; transition:color .2s; }
+  .rc-del:hover{ color:var(--reject); }
+  .rc-years{ display:flex; gap:1rem; }
+  .rc-years .fld{ margin-bottom:1rem; }
+  .rc-years .inp{ width:6.5ch; }
+  .add-more{ font-size:.8rem; color:var(--accent); border:1px dashed var(--accent); background:none; border-radius:99px; padding:.5rem 1rem; transition:all .2s var(--ease); }
+  .add-more:hover{ background:var(--accent); color:#fff; }
+  .add-actions{ position:fixed; bottom:0; left:0; right:0; display:flex; justify-content:center; gap:.8rem; padding:1rem; background:linear-gradient(0deg,var(--bg) 55%,rgba(234,230,224,0)); }
+  .btn-primary, .btn-ghost{ border-radius:99px; padding:.75rem 1.7rem; font-size:.9rem; font-weight:500; transition:transform .2s var(--ease), background .2s; }
+  .btn-primary{ background:var(--accent); color:#fff; border:none; box-shadow:0 8px 22px -12px rgba(200,90,58,.7); }
+  .btn-primary:hover{ transform:translateY(-2px); }
+  .btn-ghost{ background:var(--surface); color:var(--muted); border:1px solid var(--surface-alt); }
+  .btn-ghost:hover{ color:var(--text); }
+  .add-status{ position:fixed; bottom:5rem; left:50%; transform:translateX(-50%); font-size:.82rem; color:var(--reject); }
+  .mode-toggle{ display:inline-flex; background:var(--surface-alt); border-radius:99px; padding:4px; margin-bottom:2.4rem; }
+  .mode-toggle button{ border:none; background:none; padding:.5rem 1.2rem; border-radius:99px; font-size:.85rem; font-weight:500; color:var(--muted); transition:all .25s var(--ease); }
+  .mode-toggle button.active{ background:var(--surface); color:var(--text); box-shadow:0 2px 8px -3px rgba(26,26,24,.3); }
+  .mode-hint{ font-size:.82rem; font-weight:300; color:var(--muted); line-height:1.6; margin:-1.6rem 0 2rem; max-width:56ch; }
+  [data-mode-section]{ animation:swap .35s var(--ease) both; }
+  .ta-big{ min-height:180px; font-size:1.05rem; }
+</style>
+</head>
+<body class="add-page">
+<header class="add-top">
+  <a class="add-back" href="index.html">← back to review</a>
+  <span class="who" id="who"></span>
+</header>
+
+<main class="add-wrap">
+  <div class="add-kicker">contribute</div>
+  <h1 class="add-h1">add a diachronic</h1>
+  <p class="add-intro">Propose a visual element whose cultural meaning changed over time. Do it quickly in free text and let the team flesh it out, or lay out the full trajectory yourself.</p>
+
+  <div class="mode-toggle" role="tablist">
+    <button type="button" id="mode-quick" class="active" data-mode="quick">quick note</button>
+    <button type="button" id="mode-structured" data-mode="structured">detailed</button>
+  </div>
+
+  <form id="add-form">
+    <label class="fld"><span>visual phenomenon <em>(the title)</em></span><input class="inp" id="f-element" placeholder="e.g. the necktie" required></label>
+
+    <!-- QUICK MODE -->
+    <div data-mode-section="quick">
+      <p class="mode-hint">Just describe, in your own words, how its meaning changed over time. The team will look into it and structure it later.</p>
+      <label class="fld"><span>how it changed over time</span><textarea class="ta ta-big" id="f-freetext" placeholder="Started as… then became… and today it reads as…"></textarea></label>
+    </div>
+
+    <!-- STRUCTURED MODE -->
+    <div data-mode-section="structured" hidden>
+      <div class="row2">
+        <label class="fld"><span>category</span><input class="inp" id="f-category" placeholder="Fashion & Clothing" list="cats"></label>
+        <label class="fld"><span>shift type</span><input class="inp" id="f-shift" placeholder="linear" list="shifts"></label>
+      </div>
+      <datalist id="shifts"><option>linear</option><option>cyclical</option><option>u-shaped</option><option>accumulative</option></datalist>
+      <datalist id="cats"></datalist>
+      <label class="fld"><span>diachronic summary <em>(how the meaning shifted overall)</em></span><textarea class="ta" id="f-annotation" placeholder="One or two sentences capturing the arc from its earliest meaning to today."></textarea></label>
+
+      <div class="add-sec-head"><h2>period by period</h2></div>
+      <div id="periods"></div>
+      <button type="button" class="add-more" id="add-period">+ add a period</button>
+
+      <div class="add-sec-head"><h2>sources <em style="font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</em></h2></div>
+      <div id="sources"></div>
+      <button type="button" class="add-more" id="add-source">+ add a source</button>
+    </div>
+
+    <label class="fld" style="margin-top:2.4rem"><span>note to the researcher <em>(optional)</em></span><textarea class="ta" id="f-note" placeholder="Why this belongs in the corpus, uncertainties, anything else."></textarea></label>
+  </form>
+  <p class="add-status" id="add-status"></p>
+</main>
+
+<div class="add-actions">
+  <a class="btn-ghost" href="index.html">cancel</a>
+  <button class="btn-primary" id="save-btn" type="button">save &amp; return</button>
+</div>
+
+<script>
+const STORAGE_KEY = 'diachronic_review_v2';
+const FLASH_KEY = 'diachronic_review_flash';
+const SAVE_ENDPOINTS = ['/api/save-review', 'http://localhost:8000/api/save-review'];
+const $ = id => document.getElementById(id);
+
+function loadStudy() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; } }
+let study = loadStudy();
+if (study && study.expert) $('who').textContent = `${study.expert.first_name} ${study.expert.last_name}`;
+else $('who').textContent = 'not signed in, saved to this browser';
+
+// category suggestions from corpus (best-effort)
+fetch('approved_diachronics.json', { cache: 'no-store' }).then(r => r.json()).then(d => {
+  const entries = Array.isArray(d) ? d : (d.entries || []);
+  const cats = Array.from(new Set(entries.map(e => e.category).filter(Boolean))).sort();
+  $('cats').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+}).catch(() => {});
+
+/* dynamic period rows */
+const periodsWrap = $('periods');
+function addPeriodRow(data = {}) {
+  const card = document.createElement('div');
+  card.className = 'repeat-card period-row';
+  card.innerHTML = `
+    <div class="rc-num"></div>
+    <div class="rc-years">
+      <label class="fld"><span>from</span><input class="inp p-start" type="number" value="${data.year_start ?? ''}"></label>
+      <label class="fld"><span>to</span><input class="inp p-end" type="number" value="${data.year_end ?? ''}"></label>
+      <label class="fld" style="flex:1"><span>era label</span><input class="inp p-label" value="${data.period ? String(data.period).replace(/"/g,'&quot;') : ''}" placeholder="1920s-1930s"></label>
+    </div>
+    <label class="fld"><span>context</span><input class="inp p-context" value="${data.context ? String(data.context).replace(/"/g,'&quot;') : ''}" placeholder="short label for the era"></label>
+    <label class="fld" style="margin-bottom:0"><span>what it meant then</span><textarea class="ta p-meaning" placeholder="the meaning in this era">${data.meaning || ''}</textarea></label>
+    <button type="button" class="rc-del">remove</button>`;
+  card.querySelector('.rc-del').addEventListener('click', () => { card.remove(); renumber(); });
+  periodsWrap.appendChild(card); renumber();
+}
+function renumber() { periodsWrap.querySelectorAll('.period-row .rc-num').forEach((n, i) => n.textContent = String(i + 1).padStart(2, '0')); }
+
+/* dynamic source rows */
+const sourcesWrap = $('sources');
+function addSourceRow(data = {}) {
+  const card = document.createElement('div');
+  card.className = 'repeat-card';
+  card.innerHTML = `
+    <label class="fld"><span>citation</span><input class="inp s-cite" value="${data.citation ? String(data.citation).replace(/"/g,'&quot;') : ''}" placeholder="Author, Title, Publisher, Year"></label>
+    <label class="fld" style="margin-bottom:0"><span>url or doi <em>(optional)</em></span><input class="inp s-url" value="${data.url ? String(data.url).replace(/"/g,'&quot;') : ''}" placeholder="https://…"></label>
+    <button type="button" class="rc-del">remove</button>`;
+  card.querySelector('.rc-del').addEventListener('click', () => card.remove());
+  sourcesWrap.appendChild(card);
+}
+
+$('add-period').addEventListener('click', () => addPeriodRow());
+$('add-source').addEventListener('click', () => addSourceRow());
+addPeriodRow(); addPeriodRow(); // start with two era rows
+
+/* mode switching */
+let mode = 'quick';
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.querySelectorAll('[data-mode-section]').forEach(s => s.hidden = s.getAttribute('data-mode-section') !== m);
+}
+document.querySelectorAll('.mode-toggle button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+function collect() {
+  const base = {
+    suggestion_id: `sug_${Date.now()}`, created_at: new Date().toISOString(), mode,
+    visual_element: $('f-element').value.trim(), note: $('f-note').value.trim()
+  };
+  if (mode === 'quick') return { ...base, freetext: $('f-freetext').value.trim() };
+  const periods = Array.from(periodsWrap.querySelectorAll('.period-row')).map(c => ({
+    period: c.querySelector('.p-label').value.trim(),
+    year_start: c.querySelector('.p-start').value === '' ? null : Number(c.querySelector('.p-start').value),
+    year_end: c.querySelector('.p-end').value === '' ? null : Number(c.querySelector('.p-end').value),
+    context: c.querySelector('.p-context').value.trim(),
+    meaning: c.querySelector('.p-meaning').value.trim()
+  })).filter(p => p.period || p.context || p.meaning || p.year_start || p.year_end);
+  const sources = Array.from(sourcesWrap.querySelectorAll('.repeat-card')).map(c => ({
+    citation: c.querySelector('.s-cite').value.trim(),
+    url: c.querySelector('.s-url').value.trim(), doi: null, tier: null, verified: false
+  })).filter(s => s.citation || s.url);
+  return { ...base, category: $('f-category').value.trim(), shift_type: $('f-shift').value.trim(), annotation: $('f-annotation').value.trim(), periods, sources };
+}
+
+async function save() {
+  const s = collect();
+  if (!s.visual_element) { $('add-status').textContent = 'give the phenomenon a name first.'; $('f-element').focus(); return; }
+  study = loadStudy() || { schema_version: 'diachronic_expert_study_v2', study_id: `guest-${Date.now().toString(36)}`, expert: { first_name: 'Guest', last_name: 'Contributor' }, reviews: {}, suggestions: [] };
+  if (!Array.isArray(study.suggestions)) study.suggestions = [];
+  study.suggestions.push(s);
+  study.saved_at = new Date().toISOString();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(study)); } catch (_) {}
+  for (const url of SAVE_ENDPOINTS) { try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(study) }); if (r.ok) break; } catch (_) {} }
+  try { localStorage.setItem(FLASH_KEY, `added “${s.visual_element}”. ${study.suggestions.length} suggestion${study.suggestions.length === 1 ? '' : 's'} so far.`); } catch (_) {}
+  window.location.href = 'index.html';
+}
+$('save-btn').addEventListener('click', save);
+</script>
+</body>
+</html>
