@@ -29,7 +29,7 @@ const state = {
   studyId: null, expert: null, corpusMeta: {}, entries: [], originals: new Map(),
   reviews: {}, suggestions: [], selectedId: null, selectedPeriod: 0, editingComment: null,
   filter: 'all', themeFilter: 'all', search: '',
-  mode: 'explore', reviewStep: 0, reviewComplete: false   // explore (read-only) vs review (guided assessment)
+  mode: 'explore', reviewStep: 0, reviewComplete: false, reviewEditTheme: false   // explore (read-only) vs review (guided assessment)
 };
 const els = {};
 const saver = { timer: null, inFlight: false, again: false, serverOk: null };
@@ -390,10 +390,10 @@ function renderReview(entry) {
     <div class="theme-banner-wrap">${renderThemeBanner(id)}</div>
     <div class="tl-rail" data-tip="Each dot is a period. Its colour shows your rating once you judge it.">${periods.map((p, i) => renderNode(p, i, activePeriod)).join('')}</div>
     <div class="assess-flow">
-      <div class="assess-progress"><div class="ap-bar"><span style="width:${pct}%"></span></div><div class="ap-count">${progressText(id, steps)}</div></div>
       <div class="assess-body">${stepBodyHTML(id, step)}</div>
       <div class="review-nav">
         <button type="button" class="rv-btn back" data-review="back"${state.reviewStep === 0 ? ' disabled' : ''}>← back</button>
+        <div class="rv-progress"><div class="ap-count">${progressText(id, steps)}</div><div class="ap-bar"><span style="width:${pct}%"></span></div></div>
         <button type="button" class="rv-btn next" data-review="next">${state.reviewStep >= steps.length - 1 ? 'finish ✓' : 'next →'}</button>
       </div>
     </div>`;
@@ -407,8 +407,22 @@ function stepBodyHTML(id, step) {
   const periods = displayEntry(id).periods || [];
   return renderFocus(periods[step.i], step.i);
 }
-/* theme yes/no banner: shows the first unanswered theme question on top, until answered */
+/* theme yes/no banner. Normal flow: shows the first unanswered question on top, until answered.
+   Edit mode ("review my answers"): shows BOTH questions with their current answers, changeable. */
 function renderThemeBanner(id) {
+  if (state.reviewEditTheme) {
+    return `<div class="theme-banner editing">
+      <span class="tb-kicker">about the theme · change any answer</span>
+      <div class="tb-rows">${THEME_QS.map(q => {
+      const v = themeAnswerVal(id, q.key);
+      return `<div class="tb-row"><span class="tb-rq">${esc(q.q)}</span>
+          <span class="tb-yesno">
+            <button type="button" class="yn-btn sm no${v === 'no' ? ' on' : ''}" data-theme-ans="no" data-theme-key="${q.key}">no</button>
+            <button type="button" class="yn-btn sm yes${v === 'yes' ? ' on' : ''}" data-theme-ans="yes" data-theme-key="${q.key}">yes</button>
+          </span></div>`;
+    }).join('')}</div>
+    </div>`;
+  }
   const q = nextThemeQ(id); if (!q) return '';
   return `<div class="theme-banner" data-key="${q.key}">
     <div class="tb-text">
@@ -676,12 +690,13 @@ function setMode(mode) {
   if (mode !== 'explore' && mode !== 'review') return;
   if (mode === state.mode) return;
   if (mode === 'review') { startAssessment(); return; }
-  state.mode = 'explore'; state.reviewComplete = false; persist(); render();
+  state.mode = 'explore'; state.reviewComplete = false; state.reviewEditTheme = false; persist(); render();
 }
 /* enter the guide for the current theme, resuming at the first unanswered step */
 function startAssessment() {
   const id = state.selectedId;
   state.mode = 'review';
+  state.reviewEditTheme = false;
   state.reviewComplete = assessmentDone(id);
   state.reviewStep = firstUnansweredStep(id);
   const s = assessmentSteps(id)[state.reviewStep];
@@ -711,18 +726,10 @@ function reviewNext() {
   reviewGoStep(state.reviewStep + 1);
 }
 function reviewBack() { cancelAdvance(); if (state.reviewStep > 0) reviewGoStep(state.reviewStep - 1); }
-function finishAssessment() { if (state.reviewComplete) return; state.reviewComplete = true; renderEntry(); }
-/* "change my answer" from the complete/rejected card: if it was rejected, clear the "no" so the
-   theme banner re-asks; then drop back into the flow */
-function reviewRevisit() {
-  const id = state.selectedId;
-  if (themeRejected(id)) {
-    const r = reviewFor(id);
-    THEME_QS.forEach(q => { if (r.theme_answers[q.key] === 'no') delete r.theme_answers[q.key]; });
-    persist(); renderTop(); renderIndex();
-  }
-  reviewGoStep(0);
-}
+function finishAssessment() { if (state.reviewComplete) return; state.reviewComplete = true; state.reviewEditTheme = false; renderEntry(); }
+/* "review my answers" / "change my answer": reopen the flow with the theme questions shown
+   editable (both, with their current answers) so any answer — theme or period — can be changed */
+function reviewRevisit() { state.reviewEditTheme = true; reviewGoStep(0); }
 
 /* ---------- ratings & nav ---------- */
 /* theme-level yes/no from the top banner; answering swaps the banner to the next question,
@@ -733,7 +740,11 @@ function setThemeAnswer(key, val) {
   if (r.theme_answers[key] === val) return;
   r.theme_answers[key] = val;
   persist(); renderTop(); renderIndex(); refreshProgress();
-  if (val === 'no') { scheduleAdvance(finishAssessment, 320); return; }   // rejects the whole diachronic
+  if (val === 'no') { scheduleAdvance(finishAssessment, 320); return; }   // any "no" rejects the whole diachronic
+  if (state.reviewEditTheme) {   // reviewing answers: just record the change, stay put
+    els.entry.querySelectorAll(`.yn-btn[data-theme-key="${key}"]`).forEach(b => b.classList.toggle('on', b.dataset.themeAns === val));
+    return;
+  }
   if (assessmentDone(id)) { scheduleAdvance(finishAssessment, 420); return; }
   updateThemeBanner();
 }
@@ -872,7 +883,7 @@ function remindIfUnfinished(leavingId, targetId) {
 }
 function selectEntry(id, { animate = true } = {}) {
   remindIfUnfinished(state.selectedId, id);
-  state.selectedId = id; state.selectedPeriod = 0; state.editingComment = null; state.reviewComplete = false;
+  state.selectedId = id; state.selectedPeriod = 0; state.editingComment = null; state.reviewComplete = false; state.reviewEditTheme = false;
   if (state.mode === 'review') {
     state.reviewStep = firstUnansweredStep(id);
     const s = assessmentSteps(id)[state.reviewStep];

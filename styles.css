@@ -368,12 +368,13 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .assess-body > .theme-step{ flex:1; }
 .step-in{ animation:stepIn .3s var(--ease) both; }
 @keyframes stepIn{ from{ opacity:0; transform:translateY(7px);} to{ opacity:1; transform:none;} }
-.assess-progress{ flex:0 0 auto; margin-bottom:1rem; }
-.ap-bar{ height:5px; background:var(--surface-alt); border-radius:99px; overflow:hidden; }
+/* assessment progress lives in the nav bar (not under the timeline, where it looked like a scrollbar) */
+.rv-progress{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:.35rem; padding:0 1rem; }
+.ap-count{ font-size:.64rem; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:500; white-space:nowrap; }
+.ap-bar{ width:min(220px,60%); height:4px; background:var(--surface-alt); border-radius:99px; overflow:hidden; }
 .ap-bar span{ display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .35s var(--ease); }
-.ap-count{ margin-top:.4rem; font-size:.64rem; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:500; }
 
-/* theme yes/no BANNER (sits on top of the periods, until answered) */
+/* theme yes/no BANNER (under the title, until answered) */
 .theme-banner-wrap{ flex:0 0 auto; }
 .theme-banner{ display:flex; align-items:center; justify-content:space-between; gap:1.2rem; background:var(--accent-soft); border:1px solid rgba(200,90,58,.32); border-radius:12px; padding:.8rem 1.1rem; margin-bottom:1rem; }
 .theme-banner.tb-leave{ animation:tbLeave .32s var(--ease) forwards; }
@@ -383,6 +384,12 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .tb-q{ font-size:1.02rem; font-weight:500; line-height:1.25; }
 .tb-hint{ font-size:.78rem; font-weight:300; color:var(--muted); line-height:1.4; }
 .tb-yesno{ display:flex; gap:.5rem; flex:0 0 auto; }
+/* edit mode: both questions shown as rows so any answer can be changed while reviewing */
+.theme-banner.editing{ flex-direction:column; align-items:stretch; gap:.6rem; }
+.theme-banner.editing .tb-kicker{ margin-bottom:.1rem; }
+.tb-rows{ display:flex; flex-direction:column; gap:.5rem; }
+.tb-row{ display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.tb-rq{ font-size:.92rem; font-weight:500; min-width:0; }
 .yn-btn{ border:1.5px solid var(--surface-alt); background:var(--surface); border-radius:12px; font-family:inherit; font-weight:600; color:var(--text); transition:transform .16s var(--ease), border-color .16s, background .16s, color .16s, box-shadow .16s; }
 .yn-btn.sm{ min-width:66px; padding:.5rem 1rem; font-size:.95rem; border-radius:10px; }
 .yn-btn:hover{ transform:translateY(-2px); }
