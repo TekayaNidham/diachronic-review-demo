@@ -206,12 +206,12 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .entry-lede{ font-size:.92rem; font-weight:300; line-height:1.55; color:var(--muted); margin:.55rem 0 0; max-width:74ch; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
 /* timeline */
-.tl-rail{ flex:0 0 auto; position:relative; display:flex; gap:0; overflow-x:auto; padding:.5rem .2rem .9rem; margin-top:.5rem; scrollbar-width:thin; }
+.tl-rail{ flex:0 0 auto; position:relative; display:flex; gap:0; overflow-x:auto; padding:.35rem .2rem .5rem; margin-top:.3rem; scrollbar-width:thin; }
 .tl-node{ position:relative; flex:1 0 clamp(120px,17%,175px); text-align:left; background:none; border:none; padding:0 1rem 0 0; cursor:pointer; }
 .tl-node::before{ content:''; position:absolute; top:8px; left:0; right:0; height:1.5px; background:var(--surface-alt); transform-origin:left; animation:drawline .7s var(--ease) both; animation-delay:calc(var(--i)*70ms); }
 .tl-node:first-child::before{ left:8px; }
 @keyframes drawline{ from{transform:scaleX(0)} to{transform:scaleX(1)} }
-.tl-dot{ position:relative; width:17px; height:17px; border-radius:50%; background:var(--bg); border:2px solid var(--muted); display:grid; place-items:center; margin-bottom:.7rem; transition:transform .22s var(--ease), border-color .22s, background .22s; animation:dotin .5s var(--ease) both; animation-delay:calc(var(--i)*70ms + 200ms); }
+.tl-dot{ position:relative; width:16px; height:16px; border-radius:50%; background:var(--bg); border:2px solid var(--muted); display:grid; place-items:center; margin-bottom:.42rem; transition:transform .22s var(--ease), border-color .22s, background .22s; animation:dotin .5s var(--ease) both; animation-delay:calc(var(--i)*70ms + 200ms); }
 .tl-dot::after{ content:''; width:5px; height:5px; border-radius:50%; background:var(--muted); transition:background .22s; }
 @keyframes dotin{ from{transform:scale(0)} to{transform:scale(1)} }
 .tl-node:hover .tl-dot{ border-color:var(--accent); transform:scale(1.12); }
@@ -221,16 +221,16 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .tl-node.rated .tl-dot{ border-color:var(--c); background:var(--c); }
 .tl-node.rated .tl-dot::after{ background:#fff; }
 .tl-node.active.rated .tl-dot{ box-shadow:0 0 0 4px var(--accent-soft); }
-.tl-years{ font-size:.72rem; font-weight:500; color:var(--text); display:block; }
+.tl-years{ font-size:.7rem; font-weight:500; color:var(--text); display:block; }
 .tl-period{ font-size:.66rem; color:var(--muted); font-weight:300; display:block; margin-top:.15rem; }
-.tl-ctx{ font-size:.9rem; font-weight:300; color:var(--muted); display:block; margin-top:.5rem; line-height:1.3; }
+.tl-ctx{ font-size:.76rem; font-weight:300; color:var(--muted); display:block; margin-top:.28rem; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tl-node.active .tl-ctx{ color:var(--accent); }
 
 .period-focus{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--surface-alt); border-radius:var(--radius); padding:1.05rem 1.3rem 1.15rem; margin-top:.2rem; position:relative; animation:swap .3s var(--ease) both; box-shadow:0 12px 30px -24px rgba(26,26,24,.5); transition:border-color .25s; }
 .period-focus[data-rating="4"], .period-focus[data-rating="5"]{ border-color:rgba(42,125,79,.5); }
 .period-focus[data-rating="1"], .period-focus[data-rating="2"]{ border-color:rgba(184,58,42,.5); }
 .period-focus[data-rating="3"]{ border-color:rgba(183,162,51,.5); }
-.pf-top{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.6rem; }
+.pf-top{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.45rem; }
 .pf-index{ font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
 .pf-index span{ opacity:.6; font-weight:400; }
 .pf-verdict{ font-size:.66rem; font-weight:500; letter-spacing:.02em; padding:.2rem .6rem; border-radius:99px; }
@@ -240,7 +240,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .pf-verdict.lv4, .pf-verdict.lv5{ color:var(--approve); background:var(--approve-bg); }
 
 /* the only editable thing on the page: the year interval, as a labelled timeline slider */
-.pf-years{ flex:0 0 auto; padding-bottom:.7rem; margin-bottom:.6rem; border-bottom:1px solid var(--surface-alt); }
+.pf-years{ flex:0 0 auto; padding-bottom:.5rem; margin-bottom:.5rem; border-bottom:1px solid var(--surface-alt); }
 .year-steppers{ display:flex; align-items:center; gap:1.5rem; }
 .year-box{ display:inline-flex; align-items:center; gap:.45rem; }
 .year-box>label{ font-size:.56rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-right:.1rem; }
@@ -252,7 +252,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .step-btn:hover{ border-color:var(--accent); color:var(--accent); }
 .step-btn:active{ background:var(--accent-soft); }
 /* the timeline track with year ticks so you can follow the interval along real dates */
-.timeline-slider{ position:relative; height:50px; margin-top:.7rem; }
+.timeline-slider{ position:relative; height:40px; margin-top:.45rem; }
 /* track + ticks inset by the thumb radius (9px) so handles, fill and year labels line up */
 .range-track{ position:absolute; top:18px; left:9px; right:9px; height:6px; background:var(--surface-alt); border-radius:99px; }
 .range-fill{ position:absolute; top:0; bottom:0; background:var(--accent); border-radius:99px; }
@@ -277,13 +277,21 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .range-bubble.show{ opacity:1; transform:translate(-50%,0) scale(1); }
 
 /* the meaning: the engaging focal point; scrolls internally if long so the rest stays put */
-.pf-meaning-wrap{ flex:1 1 auto; min-height:0; overflow-y:auto; position:relative; padding:.85rem 1.1rem .9rem 1.3rem; background:linear-gradient(180deg, rgba(200,90,58,.06), rgba(200,90,58,.02)); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; scrollbar-width:thin; }
+.pf-meaning-wrap{ flex:1 1 auto; min-height:6rem; overflow-y:auto; position:relative; padding:.72rem 1.1rem .8rem 1.2rem; background:linear-gradient(180deg, rgba(200,90,58,.06), rgba(200,90,58,.02)); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; scrollbar-width:thin; }
+/* explore is a natural read: size the card to its content instead of stretching a big empty callout */
+.period-focus.explore{ flex:0 0 auto; }
+.period-focus.explore .pf-meaning-wrap{ flex:0 0 auto; min-height:auto; max-height:46vh; }
+/* in review the header is compact — the annotation was already read while exploring — so the
+   description gets more room */
+.entry[data-mode="review"] .entry-title{ font-size:clamp(1.35rem,2.2vw,1.7rem); }
+.entry[data-mode="review"] .entry-lede{ -webkit-line-clamp:1; margin-top:.3rem; }
+.entry[data-mode="review"] .pf-meaning-wrap{ min-height:6rem; }
 .pf-meaning-label{ font-size:.56rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:.5rem; }
 .pf-meaning{ font-size:1.08rem; line-height:1.58; color:var(--text); font-weight:300; letter-spacing:-.005em; }
 
 /* Likert scale: sits under the description because it judges the description */
-.pf-likert{ flex:0 0 auto; margin-top:.6rem; padding-top:.7rem; border-top:1px solid var(--surface-alt); }
-.likert-q{ font-size:.6rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:.75rem; text-align:center; }
+.pf-likert{ flex:0 0 auto; margin-top:.45rem; padding-top:.5rem; border-top:1px solid var(--surface-alt); }
+.likert-q{ font-size:.6rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:.55rem; text-align:center; }
 .likert-row{ display:flex; align-items:center; justify-content:center; gap:1.1rem; }
 .likert-anchor{ display:flex; flex-direction:column; line-height:1.2; font-size:.72rem; font-weight:600; width:72px; }
 .likert-anchor.left{ text-align:right; color:var(--reject); }
@@ -378,7 +386,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 
 /* review: the guided flow */
 .assess-flow{ flex:1; min-height:0; display:flex; flex-direction:column; }
-.assess-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+.assess-body{ flex:1; min-height:0; display:flex; flex-direction:column; overflow-y:auto; }
 .assess-body > .period-focus{ flex:1; min-height:0; }
 .assess-body > .theme-step{ flex:1; }
 .step-in{ animation:stepIn .3s var(--ease) both; }
@@ -391,7 +399,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 
 /* theme yes/no BANNER (under the title, until answered) */
 .theme-banner-wrap{ flex:0 0 auto; }
-.theme-banner{ display:flex; align-items:center; justify-content:space-between; gap:1.2rem; background:var(--accent-soft); border:1px solid rgba(200,90,58,.32); border-radius:12px; padding:.8rem 1.1rem; margin-bottom:1rem; }
+.theme-banner{ display:flex; align-items:center; justify-content:space-between; gap:1.2rem; background:var(--accent-soft); border:1px solid rgba(200,90,58,.32); border-radius:12px; padding:.65rem 1.05rem; margin-bottom:.8rem; }
 .theme-banner.tb-leave{ animation:tbLeave .32s var(--ease) forwards; }
 @keyframes tbLeave{ to{ opacity:0; transform:translateY(-8px); } }
 .tb-text{ display:flex; flex-direction:column; gap:.12rem; min-width:0; }
@@ -399,12 +407,13 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .tb-q{ font-size:1.02rem; font-weight:500; line-height:1.25; }
 .tb-hint{ font-size:.78rem; font-weight:300; color:var(--muted); line-height:1.4; }
 .tb-yesno{ display:flex; gap:.5rem; flex:0 0 auto; }
-/* edit mode: both questions shown as rows so any answer can be changed while reviewing */
-.theme-banner.editing{ flex-direction:column; align-items:stretch; gap:.6rem; }
-.theme-banner.editing .tb-kicker{ margin-bottom:.1rem; }
-.tb-rows{ display:flex; flex-direction:column; gap:.5rem; }
+/* edit mode: both questions shown as compact rows so any answer can be changed while reviewing */
+.theme-banner.editing{ flex-direction:column; align-items:stretch; gap:.35rem; padding:.55rem .95rem; }
+.theme-banner.editing .tb-kicker{ margin-bottom:.05rem; }
+.tb-rows{ display:flex; flex-direction:column; gap:.35rem; }
 .tb-row{ display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-.tb-rq{ font-size:.92rem; font-weight:500; min-width:0; }
+.tb-rq{ font-size:.88rem; font-weight:500; min-width:0; }
+.theme-banner.editing .yn-btn.sm{ padding:.4rem .95rem; }
 .yn-btn{ border:1.5px solid var(--surface-alt); background:var(--surface); border-radius:12px; font-family:inherit; font-weight:600; color:var(--text); transition:transform .16s var(--ease), border-color .16s, background .16s, color .16s, box-shadow .16s; }
 .yn-btn.sm{ min-width:66px; padding:.5rem 1rem; font-size:.95rem; border-radius:10px; }
 .yn-btn:hover{ transform:translateY(-2px); }

@@ -639,7 +639,7 @@ function notesInner(id) {
   return `<div class="side-head"><h3>user notes</h3><span class="sub">${comments.length} comment${comments.length === 1 ? '' : 's'}</span></div>
     <div class="comment-list">${comments.map(renderComment).join('')}</div>
     <div class="comment-compose" data-tip="Write a note, then press Comment or Enter (Shift+Enter for a new line). You can edit or delete your own comments.">
-      <textarea id="comment-input" placeholder="add a note on this diachronic…"></textarea>
+      <textarea id="comment-input" placeholder="add a note on this topic…"></textarea>
       <div class="comment-compose-foot"><span class="hint">enter to comment · shift+enter for a new line</span><button class="comment-submit" data-action="add-comment">comment</button></div>
     </div>`;
 }
