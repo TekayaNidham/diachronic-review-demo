@@ -688,7 +688,13 @@ function startAssessment() {
   if (s && s.kind === 'period') state.selectedPeriod = s.i;
   persist(); render();
 }
+/* one pending auto-advance at a time — rapid "approve everything" must not stack timers
+   (that was re-firing the flow after completion and piling animations on top of each other) */
+let advancePending = false;
+function scheduleAdvance(fn, ms) { advancePending = true; clearTimeout(scheduleAdvance.t); scheduleAdvance.t = setTimeout(() => { advancePending = false; fn(); }, ms); }
+function cancelAdvance() { advancePending = false; clearTimeout(scheduleAdvance.t); }
 function reviewGoStep(idx) {
+  cancelAdvance();
   const steps = assessmentSteps(state.selectedId); if (!steps.length) return;
   const wasComplete = state.reviewComplete;
   state.reviewStep = Math.max(0, Math.min(idx, steps.length - 1));
@@ -699,12 +705,13 @@ function reviewGoStep(idx) {
   if (!wasComplete && els.entry.querySelector('.assess-flow')) updateReviewFlow(); else renderEntry();
 }
 function reviewNext() {
+  cancelAdvance();
   const steps = assessmentSteps(state.selectedId);
   if (state.reviewStep >= steps.length - 1) { if (assessmentDone(state.selectedId)) finishAssessment(); else nudgeThemeBanner(); return; }
   reviewGoStep(state.reviewStep + 1);
 }
-function reviewBack() { if (state.reviewStep > 0) reviewGoStep(state.reviewStep - 1); }
-function finishAssessment() { state.reviewComplete = true; renderEntry(); celebrateCompletion(); }
+function reviewBack() { cancelAdvance(); if (state.reviewStep > 0) reviewGoStep(state.reviewStep - 1); }
+function finishAssessment() { if (state.reviewComplete) return; state.reviewComplete = true; renderEntry(); }
 /* "change my answer" from the complete/rejected card: if it was rejected, clear the "no" so the
    theme banner re-asks; then drop back into the flow */
 function reviewRevisit() {
@@ -721,17 +728,18 @@ function reviewRevisit() {
 /* theme-level yes/no from the top banner; answering swaps the banner to the next question,
    or clears it once both are answered — the period steps are unaffected */
 function setThemeAnswer(key, val) {
+  if (advancePending) return;
   const id = state.selectedId, r = reviewFor(id);
   if (r.theme_answers[key] === val) return;
   r.theme_answers[key] = val;
   persist(); renderTop(); renderIndex(); refreshProgress();
-  if (val === 'no') { setTimeout(finishAssessment, 320); return; }   // rejects the whole diachronic
-  if (assessmentDone(id)) { setTimeout(finishAssessment, 420); return; }
+  if (val === 'no') { scheduleAdvance(finishAssessment, 320); return; }   // rejects the whole diachronic
+  if (assessmentDone(id)) { scheduleAdvance(finishAssessment, 420); return; }
   updateThemeBanner();
 }
 /* each period gets a Likert rating (1..5) for how correct its description is, then the guide advances */
 function setRating(v) {
-  if (state.mode !== 'review') return;
+  if (state.mode !== 'review' || advancePending) return;
   const id = state.selectedId, n = periodCount(id);
   if (!n) return;
   const r = reviewFor(id), i = state.selectedPeriod;
@@ -742,28 +750,9 @@ function setRating(v) {
   if (!set) return;
   replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
   const steps = assessmentSteps(id);
-  if (assessmentDone(id)) setTimeout(finishAssessment, 500);
-  else if (state.reviewStep < steps.length - 1) setTimeout(reviewNext, 460);
-  else setTimeout(nudgeThemeBanner, 480);   // last period rated but a theme question is still open
-}
-/* a diachronic just got fully rated: sweep the timeline dots and pop a checkmark before moving on */
-function celebrateCompletion() {
-  if (prefersReducedMotion()) return;
-  // the dots wave with a per-dot stagger, so hold the class for the full sweep
-  // (replayAnim would strip it on the first dot's animationend and cut the rest short)
-  // the mark reflects the verdict: green check when mostly correct, red ✕ when mostly rejected
-  const vals = Object.values(periodDecisions(state.selectedId)).map(Number).filter(n => !isNaN(n));
-  const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 5;
-  const reject = themeRejected(state.selectedId) || mean < 3;
-  const rail = els.entry.querySelector('.tl-rail');
-  if (rail) { rail.classList.remove('celebrate'); void rail.offsetWidth; rail.classList.add('celebrate'); setTimeout(() => rail.classList.remove('celebrate'), 1900); }
-  const burst = document.createElement('div');
-  burst.className = 'complete-burst' + (reject ? ' reject' : '');
-  burst.innerHTML = reject
-    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>'
-    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
-  document.body.appendChild(burst);
-  setTimeout(() => burst.remove(), 1650);
+  if (assessmentDone(id)) scheduleAdvance(finishAssessment, 420);
+  else if (state.reviewStep < steps.length - 1) scheduleAdvance(reviewNext, 380);
+  else scheduleAdvance(nudgeThemeBanner, 420);   // last period rated but a theme question is still open
 }
 /* rate a source's relevance (1..5); click the same value again to clear it */
 function setSourceRating(i, v) {

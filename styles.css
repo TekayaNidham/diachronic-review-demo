@@ -401,9 +401,14 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 
 /* completion card */
 .assess-complete{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:.5rem; padding:2rem 1rem; }
-.ac-mark{ color:var(--approve); }
+.assess-complete{ animation:stepIn .3s var(--ease) both; }
+.ac-mark{ color:var(--approve); animation:acPop .4s var(--ease) both; }
 .ac-mark.reject{ color:var(--reject); }
+@keyframes acPop{ from{ transform:scale(.55); opacity:0;} to{ transform:scale(1); opacity:1;} }
 .ac-mark svg{ width:74px; height:74px; fill:none; }
+.ac-mark circle{ stroke:currentColor; stroke-width:1.5; opacity:.35; }
+.ac-mark path{ stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .6s var(--ease) .2s forwards; }
+.ac-mark.reject path{ stroke-dasharray:24; stroke-dashoffset:24; }
 .ac-mark circle{ stroke:currentColor; stroke-width:1.5; opacity:.35; }
 .ac-mark path{ stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
 .ac-title{ font-size:1.5rem; font-weight:400; }
@@ -537,16 +542,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .likert-dot.ripple::after, .src-dot.ripple::after{ content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none; animation:dotRipple .85s var(--ease); }
 @keyframes dotRipple{ 0%{ box-shadow:0 0 0 1px var(--c);} 100%{ box-shadow:0 0 0 13px rgba(200,90,58,0);} }
 
-/* completion: timeline dots sweep left-to-right, a checkmark pops in the middle */
-.tl-rail.celebrate .tl-dot{ animation:dotWave .8s var(--ease); animation-delay:calc(var(--i)*100ms); }
-@keyframes dotWave{ 0%{ transform:scale(1);} 35%{ transform:scale(1.45);} 100%{ transform:scale(1);} }
-.complete-burst{ position:fixed; left:50%; top:44%; z-index:80; pointer-events:none; color:var(--approve); animation:burstFade 1.6s var(--ease) forwards; }
-.complete-burst.reject{ color:var(--reject); }
-.complete-burst svg{ width:104px; height:104px; fill:none; }
-.complete-burst circle{ stroke:currentColor; stroke-width:1.5; opacity:.35; }
-.complete-burst path{ stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .75s var(--ease) .2s forwards; }
-.complete-burst.reject path{ stroke-dasharray:24; stroke-dashoffset:24; }
-@keyframes burstFade{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.6);} 18%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 75%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{ opacity:0; transform:translate(-50%,-50%) scale(1.08);} }
+/* completion card mark draws itself in (the single, in-card animation — no floating burst on top) */
 @keyframes checkDraw{ to{ stroke-dashoffset:0; } }
 
 /* left index rows enter with a gentle stagger (only when the list changes wholesale) */
@@ -557,5 +553,5 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
   *{ animation-duration:.001ms !important; animation-delay:0ms !important; transition-duration:.001ms !important; }
   .reveal{ opacity:1; transform:none; }
   .video-grid{ filter:blur(18px) saturate(0) brightness(.6); }
-  .complete-burst{ display:none; }
+  .ac-mark path{ stroke-dashoffset:0 !important; }
 }
