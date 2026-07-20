@@ -331,7 +331,7 @@ function renderFocus(period, i) {
       <div class="pf-index">era ${i + 1} <span>of ${periodCount(state.selectedId)}</span></div>
       ${badge}
     </div>
-    <div class="pf-years" data-tip="Drag the handles along the timeline, or use the − / + buttons, to correct the era's start and end year. This is the only thing on the page you can change.">
+    <div class="pf-years" data-tip="Correct the era's start and end year: drag the handles along the timeline (a bubble shows the year), use the − / + buttons, or type into the from / to boxes. This is the only thing on the page you can change.">
       <div class="year-steppers">
         <div class="year-box"><label>from</label><button type="button" class="step-btn" data-step="start" data-dir="-1" aria-label="earlier start">−</button><input type="number" inputmode="numeric" class="yr-input yr-from" data-year="start" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${a}" aria-label="start year"><button type="button" class="step-btn" data-step="start" data-dir="1" aria-label="later start">+</button></div>
         <div class="year-box"><label>to</label><button type="button" class="step-btn" data-step="end" data-dir="-1" aria-label="earlier end">−</button><input type="number" inputmode="numeric" class="yr-input yr-to" data-year="end" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${b}" aria-label="end year"><button type="button" class="step-btn" data-step="end" data-dir="1" aria-label="later end">+</button></div>
@@ -711,7 +711,8 @@ const TOUR = [
   { target: '.index', title: 'The corpus', body: 'Every diachronic is listed here. Search or filter, then click one to open it.' },
   { target: '.entry-title', title: 'The diachronic', body: 'The phenomenon, its category, and how its meaning shifted. Everything here is read-only: you are here to judge it, not rewrite it.' },
   { target: '.tl-rail', title: 'Era by era', body: 'Each dot is one era of this diachronic. Click a dot to read what the element meant then. You judge each era on its own.' },
-  { target: '.pf-meaning', title: 'What it meant', body: 'Read how the meaning is described for the selected era. If the year range looks off, nudge it with the arrows above it.' },
+  { target: '.pf-years', title: 'Adjust the years', body: "The era's start and end years are the one thing you can change. Drag the two handles along the timeline and a bubble shows the exact year; you can also nudge them with the − / + buttons or type straight into the from / to boxes. Everything else is read-only." },
+  { target: '.pf-meaning', title: 'What it meant', body: 'Read how the meaning is described for the selected era, then rate it below.' },
   { target: '.pf-likert', title: 'Rate the description', body: 'Under each description, rate how correct it is, from incorrect (delete) to correct (approve). Keys 1 to 5 work too. Each rating moves you to the next era, until every era is rated.' },
   { target: '#side', title: 'Sources, notes, shortcuts', body: 'Rate each source for relevance (irrelevant to very relevant), leave user notes for the team, and if a whole diachronic is clearly all-right or all-wrong, approve or reject every era at once from the buttons at the bottom.' },
   { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help, and hover anything for a one-line hint.' },
