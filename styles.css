@@ -363,7 +363,11 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 
 /* review: the guided flow */
 .assess-flow{ flex:1; min-height:0; display:flex; flex-direction:column; }
-.assess-flow > .period-focus{ flex:1; min-height:0; }
+.assess-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+.assess-body > .period-focus{ flex:1; min-height:0; }
+.assess-body > .theme-step{ flex:1; }
+.step-in{ animation:stepIn .3s var(--ease) both; }
+@keyframes stepIn{ from{ opacity:0; transform:translateY(7px);} to{ opacity:1; transform:none;} }
 .assess-progress{ flex:0 0 auto; margin-bottom:1rem; }
 .ap-bar{ height:5px; background:var(--surface-alt); border-radius:99px; overflow:hidden; }
 .ap-bar span{ display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .35s var(--ease); }
@@ -380,6 +384,10 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .yn-btn.yes:hover, .yn-btn.yes.on{ border-color:var(--approve); background:var(--approve-bg); color:var(--approve); }
 .yn-btn.no:hover, .yn-btn.no.on{ border-color:var(--reject); background:var(--reject-bg); color:var(--reject); }
 .yn-btn.on{ box-shadow:0 4px 14px -6px rgba(26,26,24,.3); }
+.yn-btn.on::after{ content:'✓'; margin-left:.45rem; font-size:.9em; }
+/* the "answered ✓ moving on" line makes it apparent the question resolves and disappears */
+.assess-answered{ margin-top:1rem; font-size:.78rem; font-weight:500; color:var(--approve); opacity:0; transform:translateY(4px); transition:opacity .2s var(--ease), transform .2s var(--ease); }
+.theme-step:not([data-answer="pending"]) .assess-answered{ opacity:1; transform:none; }
 
 /* review nav */
 .review-nav{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--surface-alt); }
@@ -392,6 +400,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 /* completion card */
 .assess-complete{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:.5rem; padding:2rem 1rem; }
 .ac-mark{ color:var(--approve); }
+.ac-mark.reject{ color:var(--reject); }
 .ac-mark svg{ width:74px; height:74px; fill:none; }
 .ac-mark circle{ stroke:currentColor; stroke-width:1.5; opacity:.35; }
 .ac-mark path{ stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }

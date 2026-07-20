@@ -375,6 +375,8 @@ function renderExploreFocus(period, i) {
   </div>`;
 }
 /* ---------- REVIEW mode: guided assessment ---------- */
+/* builds the review shell once; step-to-step changes are targeted (updateReviewFlow) so the
+   title + timeline never rebuild and their entrance animation never replays mid-assessment */
 function renderReview(entry) {
   const id = entry.id, periods = entry.periods || [];
   const steps = assessmentSteps(id);
@@ -383,39 +385,77 @@ function renderReview(entry) {
   const step = steps[state.reviewStep] || steps[0];
   const activePeriod = step && step.kind === 'period' ? step.i : -1;
   if (activePeriod >= 0) state.selectedPeriod = activePeriod;
-  const done = assessmentDoneCount(id), total = assessmentTotal(id);
-  const pct = total ? Math.round((done / total) * 100) : 0;
-  const body = !step ? '<div class="empty">nothing to assess.</div>'
-    : step.kind === 'theme' ? renderThemeStep(id, step) : renderFocus(periods[step.i], step.i);
+  const done = assessmentDoneCount(id), total = assessmentTotal(id), pct = total ? Math.round((done / total) * 100) : 0;
   els.entry.innerHTML = `
     ${topicHead(entry)}
     <div class="tl-rail" data-tip="Each dot is a period. Its colour shows your rating once you judge it.">${periods.map((p, i) => renderNode(p, i, activePeriod)).join('')}</div>
     <div class="assess-flow">
-      <div class="assess-progress"><div class="ap-bar"><span style="width:${pct}%"></span></div><div class="ap-count">step ${state.reviewStep + 1} of ${steps.length} · ${done}/${total} answered</div></div>
-      ${body}
+      <div class="assess-progress"><div class="ap-bar"><span style="width:${pct}%"></span></div><div class="ap-count">${progressText(id, steps)}</div></div>
+      <div class="assess-body">${stepBodyHTML(id, step)}</div>
       <div class="review-nav">
         <button type="button" class="rv-btn back" data-review="back"${state.reviewStep === 0 ? ' disabled' : ''}>← back</button>
-        <button type="button" class="rv-btn next" data-review="next">${state.reviewStep === steps.length - 1 ? 'finish ✓' : 'skip / next →'}</button>
+        <button type="button" class="rv-btn next" data-review="next">${state.reviewStep === steps.length - 1 ? 'finish ✓' : 'next →'}</button>
       </div>
     </div>`;
 }
+function progressText(id, steps) {
+  return `step ${state.reviewStep + 1} of ${steps.length} · ${assessmentDoneCount(id)}/${assessmentTotal(id)} answered`;
+}
+function stepBodyHTML(id, step) {
+  if (!step) return '<div class="empty">nothing to assess.</div>';
+  if (step.kind === 'theme') return renderThemeStep(id, step);
+  const periods = displayEntry(id).periods || [];
+  return renderFocus(periods[step.i], step.i);
+}
+/* commit any year edits still sitting in the slider/inputs so a step change never drops them */
+function flushYearEdits() { els.entry.querySelectorAll('.range-dual input[data-path]').forEach(commitField); }
+/* keep the shell, swap only the step body + progress + nav + active dot */
+function updateReviewFlow() {
+  const id = state.selectedId, steps = assessmentSteps(id), step = steps[state.reviewStep];
+  flushYearEdits();
+  refreshProgress();
+  const body = els.entry.querySelector('.assess-body');
+  if (body) { body.innerHTML = stepBodyHTML(id, step); replayAnim(body.firstElementChild, 'step-in'); }
+  const back = els.entry.querySelector('.rv-btn.back'); if (back) back.disabled = state.reviewStep === 0;
+  const next = els.entry.querySelector('.rv-btn.next'); if (next) next.textContent = state.reviewStep === steps.length - 1 ? 'finish ✓' : 'next →';
+  setActiveNode(step && step.kind === 'period' ? step.i : -1);
+  initRanges();
+}
+function refreshProgress() {
+  const id = state.selectedId, steps = assessmentSteps(id);
+  const total = assessmentTotal(id), pct = total ? Math.round((assessmentDoneCount(id) / total) * 100) : 0;
+  const bar = els.entry.querySelector('.ap-bar span'); if (bar) bar.style.width = pct + '%';
+  const cnt = els.entry.querySelector('.ap-count'); if (cnt) cnt.textContent = progressText(id, steps);
+}
+function setActiveNode(idx) {
+  const nodes = els.entry.querySelectorAll('.tl-node');
+  nodes.forEach((n, i) => n.classList.toggle('active', i === idx));
+  if (idx >= 0 && nodes[idx] && !prefersReducedMotion()) nodes[idx].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+}
 function renderThemeStep(id, step) {
-  const meta = THEME_QS.find(q => q.key === step.key) || {};
+  const qi = THEME_QS.findIndex(q => q.key === step.key), meta = THEME_QS[qi] || {};
   const val = themeAnswerVal(id, step.key);
   return `<div class="assess-card theme-step" data-answer="${val || 'pending'}">
-    <div class="assess-kicker">about the theme</div>
+    <div class="assess-kicker">about the theme · question ${qi + 1} of ${THEME_QS.length}</div>
     <div class="assess-q">${esc(meta.q || '')}</div>
     <div class="assess-hint">${esc(meta.hint || '')}</div>
     <div class="yesno">
       <button type="button" class="yn-btn no${val === 'no' ? ' on' : ''}" data-theme-ans="no" data-theme-key="${step.key}">no</button>
       <button type="button" class="yn-btn yes${val === 'yes' ? ' on' : ''}" data-theme-ans="yes" data-theme-key="${step.key}">yes</button>
     </div>
+    <div class="assess-answered">answered ✓ moving to the ${qi < THEME_QS.length - 1 ? 'next question' : 'periods'}…</div>
   </div>`;
 }
 function renderReviewComplete(entry) {
   const id = entry.id, n = periodCount(id);
+  const vals = Object.values(periodDecisions(id)).map(Number).filter(x => !isNaN(x));
+  const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 5;
+  const reject = mean < 3;
+  const icon = reject
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
   return `<div class="assess-complete">
-    <div class="ac-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg></div>
+    <div class="ac-mark${reject ? ' reject' : ''}">${icon}</div>
     <div class="ac-title">assessment complete</div>
     <div class="ac-sub">you judged the theme and all ${n} period${n === 1 ? '' : 's'}. your answers are saved.</div>
     <div class="ac-actions">
@@ -626,11 +666,13 @@ function startAssessment() {
 }
 function reviewGoStep(idx) {
   const steps = assessmentSteps(state.selectedId); if (!steps.length) return;
+  const wasComplete = state.reviewComplete;
   state.reviewStep = Math.max(0, Math.min(idx, steps.length - 1));
   state.reviewComplete = false;
   const s = steps[state.reviewStep];
   if (s && s.kind === 'period') state.selectedPeriod = s.i;
-  renderEntry();
+  // targeted swap when the shell is already up; full render when coming from the completion card
+  if (!wasComplete && els.entry.querySelector('.assess-flow')) updateReviewFlow(); else renderEntry();
 }
 function reviewNext() {
   const steps = assessmentSteps(state.selectedId);
@@ -641,13 +683,17 @@ function reviewBack() { if (state.reviewStep > 0) reviewGoStep(state.reviewStep 
 function finishAssessment() { state.reviewComplete = true; renderEntry(); celebrateCompletion(); }
 
 /* ---------- ratings & nav ---------- */
-/* theme-level yes/no; answering advances the guide */
+/* theme-level yes/no; the choice resolves in place, then the guide advances */
 function setThemeAnswer(key, val) {
   const id = state.selectedId, r = reviewFor(id);
   const set = r.theme_answers[key] !== val;
   if (set) r.theme_answers[key] = val; else delete r.theme_answers[key];
-  persist(); renderTop(); renderIndex(); renderEntry();
-  if (set) { if (assessmentDone(id)) setTimeout(finishAssessment, 420); else setTimeout(reviewNext, 320); }
+  persist(); renderTop(); renderIndex();
+  // targeted: light up the chosen button + show the "answered" line so it's clear it's resolved
+  els.entry.querySelectorAll(`.yn-btn[data-theme-key="${key}"]`).forEach(b => b.classList.toggle('on', set && b.dataset.themeAns === val));
+  const card = els.entry.querySelector('.theme-step'); if (card) card.dataset.answer = set ? val : 'pending';
+  refreshProgress();
+  if (set) { if (assessmentDone(id)) setTimeout(finishAssessment, 500); else setTimeout(reviewNext, 460); }
 }
 /* each period gets a Likert rating (1..5) for how correct its description is, then the guide advances */
 function setRating(v) {
@@ -658,11 +704,11 @@ function setRating(v) {
   const set = r.period_decisions[i] !== v;   // false means we are toggling it off
   if (set) r.period_decisions[i] = v; else delete r.period_decisions[i];
   persist(); renderTop(); renderIndex();
-  updatePeriodNode(i); updateLikertUI();
+  updatePeriodNode(i); updateLikertUI(); refreshProgress();
   if (!set) return;
   replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
-  if (assessmentDone(id)) setTimeout(finishAssessment, 420);
-  else setTimeout(reviewNext, 340);
+  if (assessmentDone(id)) setTimeout(finishAssessment, 500);
+  else setTimeout(reviewNext, 460);
 }
 /* a diachronic just got fully rated: sweep the timeline dots and pop a checkmark before moving on */
 function celebrateCompletion() {
