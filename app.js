@@ -28,7 +28,8 @@ function saveEndpoints() {
 const state = {
   studyId: null, expert: null, corpusMeta: {}, entries: [], originals: new Map(),
   reviews: {}, suggestions: [], selectedId: null, selectedPeriod: 0, editingComment: null,
-  filter: 'all', themeFilter: 'all', search: ''
+  filter: 'all', themeFilter: 'all', search: '',
+  mode: 'explore', reviewStep: 0, reviewComplete: false   // explore (read-only) vs review (guided assessment)
 };
 const els = {};
 const saver = { timer: null, inFlight: false, again: false, serverOk: null };
@@ -61,8 +62,9 @@ function replayAnim(el, cls) { if (!el || prefersReducedMotion()) return; el.cla
 function original(id) { return state.originals.get(String(id)); }
 function reviewFor(id) {
   const k = String(id);
-  if (!state.reviews[k]) state.reviews[k] = { decision: 'pending', comment: '', comments: [], edited: false, period_decisions: {}, source_decisions: {}, entry: clone(original(id)) };
+  if (!state.reviews[k]) state.reviews[k] = { decision: 'pending', comment: '', comments: [], edited: false, theme_answers: {}, period_decisions: {}, source_decisions: {}, entry: clone(original(id)) };
   if (!state.reviews[k].entry) state.reviews[k].entry = clone(original(id));
+  if (!state.reviews[k].theme_answers) state.reviews[k].theme_answers = {};
   if (!state.reviews[k].period_decisions) state.reviews[k].period_decisions = {};
   if (!state.reviews[k].source_decisions) state.reviews[k].source_decisions = {};
   return state.reviews[k];
@@ -84,8 +86,41 @@ function periodDecisions(id) { const r = state.reviews[String(id)]; return (r &&
 function periodRating(id, i) { const v = periodDecisions(id)[i]; return v == null ? null : Number(v); }
 function periodCount(id) { return (displayEntry(id).periods || []).length; }
 function decidedCount(id) { const pd = periodDecisions(id), n = periodCount(id); let c = 0; for (let i = 0; i < n; i++) if (pd[i]) c++; return c; }
-/* topic lifecycle: 'pending' (untouched) · 'started' (some eras judged) · 'done' (all judged) */
-function topicStatus(id) { const n = periodCount(id); if (!n) return 'pending'; const d = decidedCount(id); if (d === 0) return 'pending'; return d >= n ? 'done' : 'started'; }
+
+/* ---------- theme-level assessment (yes/no on the theme itself) ---------- */
+const THEME_QS = [
+  { key: 'diachronic', q: 'Is this theme genuinely diachronic?', hint: 'Its meaning actually shifts across historical time, rather than staying constant.' },
+  { key: 'important', q: 'Is this theme important?', hint: 'Worth documenting as a meaningful cultural shift.' }
+];
+function themeAnswers(id) { const r = state.reviews[String(id)]; return (r && r.theme_answers) || {}; }
+function themeAnswerVal(id, key) { const v = themeAnswers(id)[key]; return v === 'yes' || v === 'no' ? v : null; }
+function themeDoneCount(id) { const ta = themeAnswers(id); return THEME_QS.reduce((c, q) => c + (ta[q.key] === 'yes' || ta[q.key] === 'no' ? 1 : 0), 0); }
+/* the ordered guide: two theme questions, then one step per period */
+function assessmentSteps(id) {
+  const steps = THEME_QS.map(q => ({ kind: 'theme', key: q.key }));
+  for (let i = 0; i < periodCount(id); i++) steps.push({ kind: 'period', i });
+  return steps;
+}
+function assessmentTotal(id) { return THEME_QS.length + periodCount(id); }
+function assessmentDoneCount(id) { return themeDoneCount(id) + decidedCount(id); }
+function assessmentDone(id) { return themeDoneCount(id) === THEME_QS.length && decidedCount(id) === periodCount(id); }
+/* first step the expert hasn't answered yet (to resume mid-assessment) */
+function firstUnansweredStep(id) {
+  const steps = assessmentSteps(id);
+  for (let s = 0; s < steps.length; s++) {
+    const st = steps[s];
+    if (st.kind === 'theme' && themeAnswerVal(id, st.key) == null) return s;
+    if (st.kind === 'period' && periodRating(id, st.i) == null) return s;
+  }
+  return Math.max(0, steps.length - 1);
+}
+/* topic lifecycle: 'pending' (untouched) · 'started' (some answered) · 'done' (theme + every era answered) */
+function topicStatus(id) {
+  const total = assessmentTotal(id); if (!total) return 'pending';
+  const done = assessmentDoneCount(id);
+  if (done === 0) return 'pending';
+  return assessmentDone(id) ? 'done' : 'started';
+}
 function nextUndecided(id, from) {
   const n = periodCount(id), pd = periodDecisions(id);
   for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (!pd[i]) return i; }
@@ -123,7 +158,7 @@ function snapshot() {
     schema_version: 'diachronic_expert_study_v2', app_version: APP_VERSION, study_id: state.studyId, saved_at: nowIso(),
     expert: state.expert, corpus: { name: DEFAULT_CORPUS, title: state.corpusMeta.title || null, entry_count: state.entries.length },
     counts: counts(), reviews: state.reviews, suggestions: state.suggestions,
-    ui: { selectedId: state.selectedId, filter: state.filter, themeFilter: state.themeFilter, search: state.search }
+    ui: { selectedId: state.selectedId, filter: state.filter, themeFilter: state.themeFilter, search: state.search, mode: state.mode }
   };
 }
 function persistLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot())); return true; } catch (e) { console.warn('local save failed', e); return false; } }
@@ -137,6 +172,7 @@ function hasWork() {
   if (c.done + c.started > 0) return true;
   if ((state.suggestions || []).length) return true;
   return Object.values(state.reviews || {}).some(r => r && (
+    (r.theme_answers && Object.keys(r.theme_answers).length) ||
     (r.period_decisions && Object.keys(r.period_decisions).length) ||
     (r.source_decisions && Object.keys(r.source_decisions).length) ||
     r.edited ||
@@ -217,6 +253,7 @@ function applyStudy(data) {
   const ui = data.ui || {};
   state.selectedId = ui.selectedId != null ? ui.selectedId : state.selectedId;
   state.filter = ui.filter || 'all'; state.themeFilter = ui.themeFilter || 'all'; state.search = ui.search || '';
+  state.mode = ui.mode === 'review' ? 'review' : 'explore';
 }
 
 /* ---------- stats / filter ---------- */
@@ -252,9 +289,10 @@ function render() {
 function renderTop() {
   const c = counts(), pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
   if (els.pbarFill) els.pbarFill.style.width = pct + '%';
-  if (els.progressLabel) els.progressLabel.textContent = `${c.done} / ${c.total} reviewed${c.started ? ` · ${c.started} in progress` : ''}`;
+  if (els.progressLabel) els.progressLabel.textContent = `${c.done} / ${c.total} assessed${c.started ? ` · ${c.started} in progress` : ''}`;
   if (els.menuName) els.menuName.textContent = `${state.expert.first_name} ${state.expert.last_name}`;
   if (els.expertInitials) els.expertInitials.textContent = (state.expert.first_name[0] || '') + (state.expert.last_name[0] || '');
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
 }
 function renderIndex(animate = false) {
   els.search.value = state.search;
@@ -272,9 +310,11 @@ function renderIndex(animate = false) {
   if (state.selectedId == null) state.selectedId = list[0].id;
   els.entryList.innerHTML = list.map((entry, idx) => {
     const e = displayEntry(entry.id), st = topicStatus(entry.id);
-    const n = (e.periods || []).length, d = decidedCount(entry.id);
+    const n = (e.periods || []).length;
     const sel = String(entry.id) === String(state.selectedId) ? ' selected' : '';
-    const progress = st === 'done' ? `${n} eras reviewed` : st === 'started' ? `<span class="edited">${d}/${n} eras</span>` : `${n} eras`;
+    const progress = st === 'done' ? 'assessed'
+      : st === 'started' ? `<span class="edited">${assessmentDoneCount(entry.id)}/${assessmentTotal(entry.id)} answered</span>`
+      : `${n} period${n === 1 ? '' : 's'}`;
     const meta = [`#${esc(entry.id)}`, progress];
     if (hasComment(entry.id)) meta.push('noted');
     const tip = idx === 0 ? ' data-tip="Click any diachronic to review it. Use ↑ ↓ (or J / K) to move down the list."' : '';
@@ -290,27 +330,104 @@ function renderEntry() {
   if (!entry) { els.entry.innerHTML = '<div class="empty">select a diachronic.</div>'; renderSide(); return; }
   const periods = entry.periods || [];
   if (state.selectedPeriod >= periods.length) state.selectedPeriod = 0;
-  const st = topicStatus(state.selectedId);
-  const pill = st === 'done' ? '<span class="decided approved">review complete</span>'
-    : st === 'started' ? `<span class="decided started">${decidedCount(state.selectedId)} / ${periods.length} eras reviewed</span>` : '';
-  const tags = [];
-  if (entry.category) tags.push(`<span class="k-tag">${esc(entry.category)}</span>`);
-  if (entry.shift_type) tags.push(`<span class="k-tag accent">${esc(entry.shift_type)} shift</span>`);
-  els.entry.innerHTML = `
-    <div class="topic-head">
-      <div class="entry-kicker"><span class="k-label">entry #${esc(entry.id)}</span>${tags.join('')}${pill}</div>
-      <h1 class="entry-title">${esc(entry.visual_element || 'untitled')}</h1>
-      ${entry.annotation ? `<p class="entry-lede">${esc(entry.annotation)}</p>` : ''}
-    </div>
-    <div class="tl-rail" data-tip="Each dot is an era. Green means you approved it, red disapproved, hollow means still to judge. Click a dot to jump to it.">${periods.map(renderNode).join('')}</div>
-    ${periods.length ? renderFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no eras recorded for this diachronic.</div>'}`;
+  els.entry.dataset.mode = state.mode;
+  if (state.mode === 'review') renderReview(entry); else renderExplore(entry);
   renderSide();
   initRanges();
 }
-function renderNode(period, i) {
+/* shared theme header (title, category, shift, assessment status) */
+function topicHead(entry) {
+  const id = entry.id, st = topicStatus(id);
+  const statusPill = st === 'done' ? '<span class="decided approved">assessed</span>'
+    : st === 'started' ? `<span class="decided started">${assessmentDoneCount(id)} / ${assessmentTotal(id)} assessed</span>` : '';
+  const tags = [];
+  if (entry.category) tags.push(`<span class="k-tag">${esc(entry.category)}</span>`);
+  if (entry.shift_type) tags.push(`<span class="k-tag accent">${esc(entry.shift_type)} shift</span>`);
+  return `<div class="topic-head">
+    <div class="entry-kicker"><span class="k-label">entry #${esc(entry.id)}</span>${tags.join('')}${statusPill}</div>
+    <h1 class="entry-title">${esc(entry.visual_element || 'untitled')}</h1>
+    ${entry.annotation ? `<p class="entry-lede">${esc(entry.annotation)}</p>` : ''}
+  </div>`;
+}
+/* ---------- EXPLORE mode: read-only, no assessment ---------- */
+function renderExplore(entry) {
+  const periods = entry.periods || [];
+  els.entry.innerHTML = `
+    ${topicHead(entry)}
+    <div class="tl-rail" data-tip="Each dot is a period of this theme. Click a dot to read what the element meant then.">${periods.map((p, i) => renderNode(p, i)).join('')}</div>
+    ${periods.length ? renderExploreFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no periods recorded for this theme.</div>'}
+    <div class="explore-cta">
+      <div class="explore-cta-note">explore the theme and its periods freely. when you're ready, assess them one by one.</div>
+      <button type="button" class="start-assess-btn" data-action="start-assessment">start assessment <span aria-hidden="true">▸</span></button>
+    </div>`;
+}
+function renderExploreFocus(period, i) {
+  return `<div class="period-focus explore">
+    <div class="pf-top">
+      <div class="pf-index">period ${i + 1} <span>of ${periodCount(state.selectedId)}</span></div>
+      <span class="pf-years-read">${esc(yearsLabel(period) || '—')}</span>
+    </div>
+    ${period.context ? `<div class="pf-ctx-read">${esc(period.context)}</div>` : ''}
+    <div class="pf-meaning-wrap">
+      <div class="pf-meaning-label">what it meant then</div>
+      <div class="pf-meaning">${esc(period.meaning || 'no description recorded for this period.')}</div>
+    </div>
+  </div>`;
+}
+/* ---------- REVIEW mode: guided assessment ---------- */
+function renderReview(entry) {
+  const id = entry.id, periods = entry.periods || [];
+  const steps = assessmentSteps(id);
+  if (state.reviewStep >= steps.length) state.reviewStep = Math.max(0, steps.length - 1);
+  if (state.reviewComplete && assessmentDone(id)) { els.entry.innerHTML = topicHead(entry) + renderReviewComplete(entry); return; }
+  const step = steps[state.reviewStep] || steps[0];
+  const activePeriod = step && step.kind === 'period' ? step.i : -1;
+  if (activePeriod >= 0) state.selectedPeriod = activePeriod;
+  const done = assessmentDoneCount(id), total = assessmentTotal(id);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const body = !step ? '<div class="empty">nothing to assess.</div>'
+    : step.kind === 'theme' ? renderThemeStep(id, step) : renderFocus(periods[step.i], step.i);
+  els.entry.innerHTML = `
+    ${topicHead(entry)}
+    <div class="tl-rail" data-tip="Each dot is a period. Its colour shows your rating once you judge it.">${periods.map((p, i) => renderNode(p, i, activePeriod)).join('')}</div>
+    <div class="assess-flow">
+      <div class="assess-progress"><div class="ap-bar"><span style="width:${pct}%"></span></div><div class="ap-count">step ${state.reviewStep + 1} of ${steps.length} · ${done}/${total} answered</div></div>
+      ${body}
+      <div class="review-nav">
+        <button type="button" class="rv-btn back" data-review="back"${state.reviewStep === 0 ? ' disabled' : ''}>← back</button>
+        <button type="button" class="rv-btn next" data-review="next">${state.reviewStep === steps.length - 1 ? 'finish ✓' : 'skip / next →'}</button>
+      </div>
+    </div>`;
+}
+function renderThemeStep(id, step) {
+  const meta = THEME_QS.find(q => q.key === step.key) || {};
+  const val = themeAnswerVal(id, step.key);
+  return `<div class="assess-card theme-step" data-answer="${val || 'pending'}">
+    <div class="assess-kicker">about the theme</div>
+    <div class="assess-q">${esc(meta.q || '')}</div>
+    <div class="assess-hint">${esc(meta.hint || '')}</div>
+    <div class="yesno">
+      <button type="button" class="yn-btn no${val === 'no' ? ' on' : ''}" data-theme-ans="no" data-theme-key="${step.key}">no</button>
+      <button type="button" class="yn-btn yes${val === 'yes' ? ' on' : ''}" data-theme-ans="yes" data-theme-key="${step.key}">yes</button>
+    </div>
+  </div>`;
+}
+function renderReviewComplete(entry) {
+  const id = entry.id, n = periodCount(id);
+  return `<div class="assess-complete">
+    <div class="ac-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg></div>
+    <div class="ac-title">assessment complete</div>
+    <div class="ac-sub">you judged the theme and all ${n} period${n === 1 ? '' : 's'}. your answers are saved.</div>
+    <div class="ac-actions">
+      <button type="button" class="rv-btn" data-review="revisit">review my answers</button>
+      <button type="button" class="rv-btn primary" data-action="next-theme">choose the next theme ▸</button>
+    </div>
+  </div>`;
+}
+function renderNode(period, i, activeIdx) {
   const v = periodRating(state.selectedId, i);
   const cls = v != null ? ` rated ${likertClass(v)}` : '';
-  const active = i === state.selectedPeriod ? ' active' : '';
+  const active = i === (activeIdx === undefined ? state.selectedPeriod : activeIdx) ? ' active' : '';
   return `<button class="tl-node${active}${cls}" style="--i:${i}" data-period="${i}">
     <span class="tl-dot"></span>
     <span class="tl-years">${esc(yearsLabel(period))}</span>
@@ -366,22 +483,16 @@ function renderSide() {
   const id = state.selectedId;
   if (!state.entries.length || id == null) { els.side.innerHTML = ''; return; }
   const sources = (displayEntry(id).sources || []);
+  const rateable = state.mode === 'review';
+  const srcTip = rateable ? ' data-tip="Rate each source for how relevant it is to this theme, from irrelevant (delete) to very relevant (approve)."' : '';
   els.side.innerHTML = `
     <section class="side-sec">
-      <div class="side-head" data-tip="Rate each source for how relevant it is to this diachronic, from irrelevant (delete) to very relevant (approve)."><h3>sources</h3><span class="sub">${sources.length}</span></div>
-      <div class="sources">${sources.length ? sources.map(renderSource).join('') : '<div class="side-empty">no sources listed.</div>'}</div>
+      <div class="side-head"${srcTip}><h3>sources</h3><span class="sub">${sources.length}</span></div>
+      <div class="sources">${sources.length ? sources.map((s, i) => renderSource(s, i, rateable)).join('') : '<div class="side-empty">no sources listed.</div>'}</div>
     </section>
-    <section class="side-sec notes-sec" id="notes-sec">${notesInner(id)}</section>
-    <section class="side-sec bulk-sec">
-      <div class="side-head" data-tip="Judge the whole diachronic at once: rate every era correct, every era incorrect, or leave it for later."><h3>whole diachronic</h3></div>
-      <div class="bulk-actions">
-        <button type="button" class="bulk-btn approve" data-action="approve-all">approve all eras</button>
-        <button type="button" class="bulk-btn reject" data-action="reject-all">reject all eras</button>
-        <button type="button" class="bulk-btn skip" data-action="skip-topic">skip for now</button>
-      </div>
-    </section>`;
+    <section class="side-sec notes-sec" id="notes-sec">${notesInner(id)}</section>`;
 }
-function renderSource(source, i) {
+function renderSource(source, i, rateable) {
   const meta = [];
   if (source.verified) meta.push('<span class="verified">verified</span>');
   if (source.tier != null && source.tier !== '') meta.push(`tier ${esc(source.tier)}`);
@@ -394,15 +505,7 @@ function renderSource(source, i) {
   const rank = v == null
     ? '<span class="src-rank none">rate relevance</span>'
     : `<span class="src-rank ${likertClass(v)}">${esc(srcLabel(v))}</span>`;
-  return `<div class="source" data-src="${i}" data-rating="${v || ''}">
-    <div class="source-top">
-      <span class="source-num">${String(i + 1).padStart(2, '0')}</span>
-      <div class="source-body">
-        <div class="source-cite">${esc(source.citation || 'untitled source')}</div>
-        ${meta.length ? `<div class="source-meta">${meta.join(' · ')}</div>` : ''}
-      </div>
-    </div>
-    <button type="button" class="src-toggle" data-src-toggle="${i}" aria-expanded="false">
+  const rater = rateable ? `<button type="button" class="src-toggle" data-src-toggle="${i}" aria-expanded="false">
       ${rank}<span class="src-caret" aria-hidden="true">›</span>
     </button>
     <div class="src-likert">
@@ -411,7 +514,16 @@ function renderSource(source, i) {
         <div class="src-scale"><div class="src-line"></div>${dots}</div>
         <span class="src-anchor right">very relevant<em>approve</em></span>
       </div>
+    </div>` : '';
+  return `<div class="source" data-src="${i}" data-rating="${v || ''}">
+    <div class="source-top">
+      <span class="source-num">${String(i + 1).padStart(2, '0')}</span>
+      <div class="source-body">
+        <div class="source-cite">${esc(source.citation || 'untitled source')}</div>
+        ${meta.length ? `<div class="source-meta">${meta.join(' · ')}</div>` : ''}
+      </div>
     </div>
+    ${rater}
   </div>`;
 }
 function notesInner(id) {
@@ -495,21 +607,62 @@ function deleteComment(cid) {
   persist(); refreshNotes(); renderIndex();
 }
 
+/* ---------- mode + guided assessment flow ---------- */
+function setMode(mode) {
+  if (mode !== 'explore' && mode !== 'review') return;
+  if (mode === state.mode) return;
+  if (mode === 'review') { startAssessment(); return; }
+  state.mode = 'explore'; state.reviewComplete = false; persist(); render();
+}
+/* enter the guide for the current theme, resuming at the first unanswered step */
+function startAssessment() {
+  const id = state.selectedId;
+  state.mode = 'review';
+  state.reviewComplete = assessmentDone(id);
+  state.reviewStep = firstUnansweredStep(id);
+  const s = assessmentSteps(id)[state.reviewStep];
+  if (s && s.kind === 'period') state.selectedPeriod = s.i;
+  persist(); render();
+}
+function reviewGoStep(idx) {
+  const steps = assessmentSteps(state.selectedId); if (!steps.length) return;
+  state.reviewStep = Math.max(0, Math.min(idx, steps.length - 1));
+  state.reviewComplete = false;
+  const s = steps[state.reviewStep];
+  if (s && s.kind === 'period') state.selectedPeriod = s.i;
+  renderEntry();
+}
+function reviewNext() {
+  const steps = assessmentSteps(state.selectedId);
+  if (state.reviewStep >= steps.length - 1) { if (assessmentDone(state.selectedId)) finishAssessment(); return; }
+  reviewGoStep(state.reviewStep + 1);
+}
+function reviewBack() { if (state.reviewStep > 0) reviewGoStep(state.reviewStep - 1); }
+function finishAssessment() { state.reviewComplete = true; renderEntry(); celebrateCompletion(); }
+
 /* ---------- ratings & nav ---------- */
-/* each era gets a Likert rating (1..5) for how correct its description is, then advance */
+/* theme-level yes/no; answering advances the guide */
+function setThemeAnswer(key, val) {
+  const id = state.selectedId, r = reviewFor(id);
+  const set = r.theme_answers[key] !== val;
+  if (set) r.theme_answers[key] = val; else delete r.theme_answers[key];
+  persist(); renderTop(); renderIndex(); renderEntry();
+  if (set) { if (assessmentDone(id)) setTimeout(finishAssessment, 420); else setTimeout(reviewNext, 320); }
+}
+/* each period gets a Likert rating (1..5) for how correct its description is, then the guide advances */
 function setRating(v) {
+  if (state.mode !== 'review') return;
   const id = state.selectedId, n = periodCount(id);
   if (!n) return;
-  const r = reviewFor(id), i = state.selectedPeriod, was = topicStatus(id);
+  const r = reviewFor(id), i = state.selectedPeriod;
   const set = r.period_decisions[i] !== v;   // false means we are toggling it off
   if (set) r.period_decisions[i] = v; else delete r.period_decisions[i];
   persist(); renderTop(); renderIndex();
   updatePeriodNode(i); updateLikertUI();
-  if (set) {
-    replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
-    if (topicStatus(id) === 'done' && was !== 'done') { celebrateCompletion(); setTimeout(goNextPending, 1400); }
-    else { const nxt = nextUndecided(id, i); if (nxt >= 0) setTimeout(() => selectPeriod(nxt), 300); }
-  }
+  if (!set) return;
+  replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
+  if (assessmentDone(id)) setTimeout(finishAssessment, 420);
+  else setTimeout(reviewNext, 340);
 }
 /* a diachronic just got fully rated: sweep the timeline dots and pop a checkmark before moving on */
 function celebrateCompletion() {
@@ -545,16 +698,22 @@ function updateSourceUI(i) {
   const rank = src && src.querySelector('.src-rank');
   if (rank) { rank.className = 'src-rank ' + (v == null ? 'none' : likertClass(v)); rank.textContent = v == null ? 'rate relevance' : srcLabel(v); }
 }
-/* whole-diachronic shortcuts: rate every era at once, then move on (like the old approve/reject) */
-function rateAll(v) {
-  const id = state.selectedId, n = periodCount(id); if (!n) return;
-  const r = reviewFor(id);
-  for (let i = 0; i < n; i++) r.period_decisions[i] = v;
-  persist(); renderTop(); renderIndex(); renderEntry();
-  celebrateCompletion();                 // same completion sweep + checkmark as rating the last era by hand
-  setTimeout(goNextPending, 1400);
+/* explore mode: click a timeline dot to read that period (read-only, no re-render thrash) */
+function exploreSelectPeriod(i) {
+  state.selectedPeriod = i;
+  const nodes = els.entry.querySelectorAll('.tl-node');
+  nodes.forEach((n, idx) => n.classList.toggle('active', idx === i));
+  if (nodes[i] && !prefersReducedMotion()) nodes[i].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  const periods = displayEntry(state.selectedId).periods || [];
+  const focus = els.entry.querySelector('.period-focus');
+  if (periods[i] && focus) { const tmp = document.createElement('div'); tmp.innerHTML = renderExploreFocus(periods[i], i); focus.replaceWith(tmp.firstElementChild); }
 }
-function skipTopic() { goNextPending(); }
+/* review mode: click a period dot to jump straight to that period's step */
+function reviewSelectPeriod(i) {
+  const steps = assessmentSteps(state.selectedId);
+  const idx = steps.findIndex(s => s.kind === 'period' && s.i === i);
+  if (idx >= 0) reviewGoStep(idx);
+}
 function updatePeriodNode(i) {
   const node = els.entry.querySelectorAll('.tl-node')[i]; if (!node) return;
   const v = periodRating(state.selectedId, i);
@@ -628,31 +787,28 @@ function stepYear(which, dir) {
   inp.value = Math.max(min, Math.min(max, Number(inp.value) + dir));
   syncRange(inp); commitField(inp);
 }
-function selectPeriod(i) {
-  state.selectedPeriod = i;
-  const nodes = els.entry.querySelectorAll('.tl-node');
-  nodes.forEach((n, idx) => n.classList.toggle('active', idx === i));
-  if (nodes[i] && !prefersReducedMotion()) nodes[i].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  const periods = displayEntry(state.selectedId).periods || [];
-  const focus = els.entry.querySelector('.period-focus');
-  if (periods[i] && focus) { const tmp = document.createElement('div'); tmp.innerHTML = renderFocus(periods[i], i); focus.replaceWith(tmp.firstElementChild); }
-  initRanges();
-}
-function stepPeriod(delta) {
+function stepPeriod(delta) {   // explore-mode period browsing
   const n = periodCount(state.selectedId); if (!n) return;
   const i = Math.min(n - 1, Math.max(0, state.selectedPeriod + delta));
-  if (i !== state.selectedPeriod) selectPeriod(i);
+  if (i !== state.selectedPeriod) exploreSelectPeriod(i);
 }
-/* never discard: leaving a half-rated diachronic just reminds you it isn't finished; progress is kept */
+/* never discard: leaving a half-answered theme just reminds you it isn't finished; progress is kept */
 function remindIfUnfinished(leavingId, targetId) {
   if (leavingId == null || String(leavingId) === String(targetId)) return;
   if (topicStatus(leavingId) !== 'started') return;
-  const e = displayEntry(leavingId), left = periodCount(leavingId) - decidedCount(leavingId);
-  toast(`"${e.visual_element}" isn't finished yet · ${left} era${left === 1 ? '' : 's'} left to rate. your progress is saved.`);
+  const e = displayEntry(leavingId), left = assessmentTotal(leavingId) - assessmentDoneCount(leavingId);
+  toast(`"${e.visual_element}" isn't finished yet · ${left} answer${left === 1 ? '' : 's'} left. your progress is saved.`);
 }
 function selectEntry(id, { animate = true } = {}) {
   remindIfUnfinished(state.selectedId, id);
-  state.selectedId = id; state.selectedPeriod = 0; state.editingComment = null; persistLocal();
+  state.selectedId = id; state.selectedPeriod = 0; state.editingComment = null; state.reviewComplete = false;
+  if (state.mode === 'review') {
+    state.reviewStep = firstUnansweredStep(id);
+    const s = assessmentSteps(id)[state.reviewStep];
+    if (s && s.kind === 'period') state.selectedPeriod = s.i;
+    state.reviewComplete = assessmentDone(id);
+  }
+  persistLocal();
   renderIndex(); renderEntry();
   if (animate) { els.entry.classList.remove('swap'); void els.entry.offsetWidth; els.entry.classList.add('swap'); }
   hideTip(); if (tour) layoutStep();
@@ -661,7 +817,7 @@ function goNextPending() {
   const rows = filtered(), i = rows.findIndex(e => String(e.id) === String(state.selectedId));
   const ordered = i >= 0 ? rows.slice(i + 1).concat(rows.slice(0, i + 1)) : rows;
   const next = ordered.find(e => String(e.id) !== String(state.selectedId) && topicStatus(e.id) !== 'done');
-  if (!next) { toast('every diachronic in this view is reviewed ✦'); return; }
+  if (!next) { toast('every theme in this view is assessed ✦'); return; }
   selectEntry(next.id);
 }
 function stepEntry(delta) {
@@ -707,16 +863,15 @@ function newStudy() {
    GUIDANCE: spotlight tour + non-modal hover tooltips
    ============================================================ */
 const TOUR = [
-  { target: null, title: 'Welcome', body: "Here's a one-minute tour of how the review works. You can skip anytime." },
-  { target: '.index', title: 'The corpus', body: 'Every diachronic is listed here. Search or filter, then click one to open it.' },
-  { target: '.entry-title', title: 'The diachronic', body: 'The phenomenon, its category, and how its meaning shifted. Everything here is read-only: you are here to judge it, not rewrite it.' },
-  { target: '.tl-rail', title: 'Era by era', body: 'Each dot is one era of this diachronic. Click a dot to read what the element meant then. You judge each era on its own.' },
-  { target: '.pf-years', title: 'Adjust the years', body: "The era's start and end years are the one thing you can change. Drag the two handles along the timeline and a bubble shows the exact year; you can also nudge them with the − / + buttons or type straight into the from / to boxes. Everything else is read-only." },
-  { target: '.pf-meaning', title: 'What it meant', body: 'Read how the meaning is described for the selected era, then rate it below.' },
-  { target: '.pf-likert', title: 'Rate the description', body: 'Under each description, rate how correct it is, from incorrect (delete) to correct (approve). Keys 1 to 5 work too. Each rating moves you to the next era, until every era is rated.' },
-  { target: '#side', title: 'Sources, notes, shortcuts', body: 'Rate each source for relevance (irrelevant to very relevant), leave user notes for the team, and if a whole diachronic is clearly all-right or all-wrong, approve or reject every era at once from the buttons at the bottom.' },
+  { target: null, title: 'Welcome', body: "Here's a one-minute tour of how it works. There are two modes: Explore first, then Review. You can skip anytime." },
+  { target: '.index', title: 'The corpus', body: 'Every theme (one diachronic) is listed here. Search or filter, then click one to open it.' },
+  { target: '.entry-title', title: 'The theme', body: 'The visual element, its category, and how its meaning shifted. Nothing here is rewritten: you are here to judge it.' },
+  { target: '.tl-rail', title: 'Period by period', body: 'Each dot is one period of this theme. In Explore mode, click a dot to read what the element meant then, with no pressure to assess yet.' },
+  { target: '.explore-cta', title: 'Explore, then assess', body: 'Read the theme and its periods freely. When you are ready, press Start assessment to switch into Review mode and be guided through the questions.' },
+  { target: '.mode-switch', title: 'Two modes', body: 'Switch between Explore (read-only browsing) and Review (the guided assessment) here at any time.' },
+  { target: '#side', title: 'Sources and notes', body: 'The sources sit here for reference (you rate them for relevance while reviewing), and you can leave user notes for the team.' },
   { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help, and hover anything for a one-line hint.' },
-  { target: null, title: "You're set", body: 'That is everything. Happy reviewing.' }
+  { target: null, title: "You're set", body: "In Review you'll answer two yes/no questions about the theme, then rate each period's description and confirm its years. Happy reviewing." }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
 function markOnboarded() { try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {} }
@@ -875,10 +1030,16 @@ function bind() {
   els.entry.addEventListener('click', e => {
     const step = e.target.closest('[data-step]');
     if (step) { stepYear(step.dataset.step, Number(step.dataset.dir)); return; }
+    const yn = e.target.closest('[data-theme-ans]');
+    if (yn) { setThemeAnswer(yn.dataset.themeKey, yn.dataset.themeAns); return; }
     const dot = e.target.closest('.likert-dot');
     if (dot) { setRating(Number(dot.dataset.likert)); return; }
+    const rv = e.target.closest('[data-review]');
+    if (rv) { const a = rv.dataset.review; if (a === 'next') reviewNext(); else if (a === 'back') reviewBack(); else if (a === 'revisit') reviewGoStep(0); return; }
+    const act = e.target.closest('[data-action]');
+    if (act) { handleAction(act.dataset.action, act); return; }
     const node = e.target.closest('.tl-node');
-    if (node) selectPeriod(Number(node.dataset.period));
+    if (node) { const i = Number(node.dataset.period); if (state.mode === 'review') reviewSelectPeriod(i); else exploreSelectPeriod(i); }
   });
 
   // sources + comments live in the side column
@@ -906,6 +1067,7 @@ function bind() {
   els.studyFile.addEventListener('change', async e => { await importStudyFile(e.target.files[0]); e.target.value = ''; });
   $('help-btn').addEventListener('click', startTour);
   $('brand').addEventListener('click', e => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
 
   document.addEventListener('keydown', e => {
     if (tour) {
@@ -921,10 +1083,18 @@ function bind() {
     if (e.key === 'Escape' && state.editingComment) { cancelEditComment(); return; }
     if (typing) return;
     const k = e.key.toLowerCase();
-    if (/^[1-5]$/.test(e.key)) { e.preventDefault(); setRating(Number(e.key)); }
-    else if (k === 'c') { e.preventDefault(); const t = $('comment-input'); if (t) { t.focus(); } }
-    else if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); stepPeriod(1); }
-    else if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); stepPeriod(-1); }
+    if (state.mode === 'review') {
+      const step = assessmentSteps(state.selectedId)[state.reviewStep];
+      if (step && step.kind === 'theme' && (k === 'y' || k === 'n')) { e.preventDefault(); setThemeAnswer(step.key, k === 'y' ? 'yes' : 'no'); return; }
+      if (/^[1-5]$/.test(e.key)) { e.preventDefault(); setRating(Number(e.key)); return; }
+      if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); reviewNext(); return; }
+      if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); reviewBack(); return; }
+    } else {
+      if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); stepPeriod(1); return; }
+      if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); stepPeriod(-1); return; }
+      if (e.key === 'Enter') { e.preventDefault(); startAssessment(); return; }
+    }
+    if (k === 'c') { e.preventDefault(); const t = $('comment-input'); if (t) { t.focus(); } }
     else if (e.key === 'ArrowDown' || k === 'j') { e.preventDefault(); stepEntry(1); }
     else if (e.key === 'ArrowUp' || k === 'k') { e.preventDefault(); stepEntry(-1); }
   });
@@ -937,9 +1107,8 @@ function handleAction(action, el) {
   else if (action === 'save-comment') saveComment(cid);
   else if (action === 'cancel-comment') cancelEditComment();
   else if (action === 'delete-comment') deleteComment(cid);
-  else if (action === 'approve-all') rateAll(5);
-  else if (action === 'reject-all') rateAll(1);
-  else if (action === 'skip-topic') skipTopic();
+  else if (action === 'start-assessment') startAssessment();
+  else if (action === 'next-theme') goNextPending();
 }
 
 /* ---------- video login background ---------- */
