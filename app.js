@@ -382,8 +382,8 @@ function renderReview(entry) {
   const done = assessmentDoneCount(id), total = assessmentTotal(id), pct = total ? Math.round((done / total) * 100) : 0;
   els.entry.innerHTML = `
     ${topicHead(entry)}
-    <div class="tl-rail" data-tip="Each dot is a period. Its colour shows your rating once you judge it.">${periods.map((p, i) => renderNode(p, i, activePeriod)).join('')}</div>
     <div class="theme-banner-wrap">${renderThemeBanner(id)}</div>
+    <div class="tl-rail" data-tip="Each dot is a period. Its colour shows your rating once you judge it.">${periods.map((p, i) => renderNode(p, i, activePeriod)).join('')}</div>
     <div class="assess-flow">
       <div class="assess-progress"><div class="ap-bar"><span style="width:${pct}%"></span></div><div class="ap-count">${progressText(id, steps)}</div></div>
       <div class="assess-body">${stepBodyHTML(id, step)}</div>
