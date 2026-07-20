@@ -53,6 +53,9 @@ function toast(msg) { els.toast.textContent = msg; els.toast.classList.add('show
 function debounce(fn, ms) { let t; return function (...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); }; }
 function fmtTime(iso) { try { return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } }
 function expertName() { return state.expert ? `${state.expert.first_name} ${state.expert.last_name}` : 'Reviewer'; }
+function prefersReducedMotion() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+/* replay a one-shot CSS animation class on an element (safe if it is null) */
+function replayAnim(el, cls) { if (!el || prefersReducedMotion()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
 
 /* ---------- review accessors ---------- */
 function original(id) { return state.originals.get(String(id)); }
@@ -152,7 +155,12 @@ function flushSave() {
   persistLocal();
   try { if (navigator.sendBeacon) navigator.sendBeacon(saveEndpoints()[0], new Blob([JSON.stringify(snapshot())], { type: 'application/json' })); } catch (_) {}
 }
-function setSave(mode, text) { if (!els.saveDot) return; els.saveDot.dataset.mode = mode; if (els.saveText) els.saveText.textContent = text; }
+function setSave(mode, text) {
+  if (!els.saveDot) return;
+  els.saveDot.dataset.mode = mode;
+  if (els.saveText) els.saveText.textContent = text;
+  if (mode === 'live' || mode === 'local') replayAnim(els.saveDot, 'just-saved');   // a soft heartbeat each time work settles
+}
 function scheduleServerSave() { clearTimeout(saver.timer); saver.timer = setTimeout(serverSave, 900); }
 async function serverSave() {
   if (saver.inFlight) { saver.again = true; return; }
@@ -239,7 +247,7 @@ function render() {
   document.body.dataset.screen = loggedIn ? 'app' : 'intro';
   els.app.hidden = !loggedIn;
   if (!loggedIn) return;
-  renderTop(); renderIndex(); renderEntry();
+  renderTop(); renderIndex(true); renderEntry();
 }
 function renderTop() {
   const c = counts(), pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
@@ -248,7 +256,7 @@ function renderTop() {
   if (els.menuName) els.menuName.textContent = `${state.expert.first_name} ${state.expert.last_name}`;
   if (els.expertInitials) els.expertInitials.textContent = (state.expert.first_name[0] || '') + (state.expert.last_name[0] || '');
 }
-function renderIndex() {
+function renderIndex(animate = false) {
   els.search.value = state.search;
   document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.filter === state.filter));
   const themes = themeOptions();
@@ -257,6 +265,7 @@ function renderIndex() {
     themes.map(t => `<option value="${esc(t)}">${esc(t)} (${state.entries.filter(e => themeForEntry(e) === t).length})</option>`).join('');
   els.themeFilter.value = state.themeFilter;
   const list = filtered();
+  els.entryList.classList.toggle('stagger', animate && !prefersReducedMotion());
   if (!list.length) { els.entryList.innerHTML = '<div class="empty">no diachronics match.</div>'; return; }
   // keep the current selection even if a filter would hide it (e.g. it just moved from "to do" to "in progress"),
   // so a review in progress is never yanked away; only pick a default when nothing is selected yet.
@@ -269,7 +278,7 @@ function renderIndex() {
     const meta = [`#${esc(entry.id)}`, progress];
     if (hasComment(entry.id)) meta.push('noted');
     const tip = idx === 0 ? ' data-tip="Click any diachronic to review it. Use ↑ ↓ (or J / K) to move down the list."' : '';
-    return `<button class="entry-item${sel}" data-id="${entry.id}"${tip}>
+    return `<button class="entry-item${sel}" data-id="${entry.id}" style="--r:${Math.min(idx, 14)}"${tip}>
       <div class="ei-top"><span class="ei-name">${esc(e.visual_element || 'untitled')}</span><span class="ei-status ${st}"></span></div>
       <div class="ei-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
     </button>`;
@@ -331,6 +340,10 @@ function renderFocus(period, i) {
       <div class="timeline-slider range-dual" data-min="${YEAR_MIN}" data-max="${YEAR_MAX}">
         <div class="range-track"><div class="range-fill"></div></div>
         <div class="ts-ticks">${yearTicks(YEAR_MIN, YEAR_MAX)}</div>
+        <div class="range-bubbles" aria-hidden="true">
+          <div class="range-bubble range-bubble-lo"></div>
+          <div class="range-bubble range-bubble-hi"></div>
+        </div>
         <input type="range" class="range-lo" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" value="${a}" data-path="periods.${i}.year_start" aria-label="start year">
         <input type="range" class="range-hi" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" value="${b}" data-path="periods.${i}.year_end" aria-label="end year">
       </div>
@@ -494,15 +507,31 @@ function setRating(v) {
   persist(); renderTop(); renderIndex();
   updatePeriodNode(i); updateLikertUI();
   if (set) {
-    if (topicStatus(id) === 'done' && was !== 'done') { setTimeout(() => { toast('every era rated ✦ moving on'); goNextPending(); }, 540); }
+    replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
+    if (topicStatus(id) === 'done' && was !== 'done') { celebrateCompletion(); setTimeout(() => { toast('every era rated ✦ moving on'); goNextPending(); }, 900); }
     else { const nxt = nextUndecided(id, i); if (nxt >= 0) setTimeout(() => selectPeriod(nxt), 300); }
   }
+}
+/* a diachronic just got fully rated: sweep the timeline dots and pop a checkmark before moving on */
+function celebrateCompletion() {
+  if (prefersReducedMotion()) return;
+  // the dots wave with a per-dot stagger, so hold the class for the full sweep
+  // (replayAnim would strip it on the first dot's animationend and cut the rest short)
+  const rail = els.entry.querySelector('.tl-rail');
+  if (rail) { rail.classList.remove('celebrate'); void rail.offsetWidth; rail.classList.add('celebrate'); setTimeout(() => rail.classList.remove('celebrate'), 1300); }
+  const burst = document.createElement('div');
+  burst.className = 'complete-burst';
+  burst.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
+  document.body.appendChild(burst);
+  setTimeout(() => burst.remove(), 1100);
 }
 /* rate a source's relevance (1..5); click the same value again to clear it */
 function setSourceRating(i, v) {
   const id = state.selectedId, r = reviewFor(id);
-  if (r.source_decisions[i] === v) delete r.source_decisions[i]; else r.source_decisions[i] = v;
+  const set = r.source_decisions[i] !== v;
+  if (set) r.source_decisions[i] = v; else delete r.source_decisions[i];
   persist(); updateSourceUI(i);
+  if (set) replayAnim(els.side.querySelector(`.src-dot[data-src-idx="${i}"][data-src-likert="${v}"]`), 'ripple');
 }
 function updateSourceUI(i) {
   const v = sourceRating(state.selectedId, i);
@@ -546,6 +575,9 @@ function syncRange(input) {
   const fill = dual.querySelector('.range-fill');
   const l = ((a - min) / span) * 100, r = ((b - min) / span) * 100;
   if (fill) { fill.style.left = l + '%'; fill.style.width = Math.max(0, r - l) + '%'; }
+  const bLo = dual.querySelector('.range-bubble-lo'), bHi = dual.querySelector('.range-bubble-hi');
+  if (bLo) { bLo.style.left = l + '%'; bLo.textContent = a; }
+  if (bHi) { bHi.style.left = r + '%'; bHi.textContent = b; }
   const card = input.closest('.period-focus');
   if (card) {
     const f = card.querySelector('.yr-from'), t = card.querySelector('.yr-to');
@@ -555,6 +587,13 @@ function syncRange(input) {
   const node = els.entry.querySelectorAll('.tl-node')[state.selectedPeriod];
   if (node) { const s = node.querySelector('.tl-years'); if (s) s.textContent = `${a}-${b}`; }
 }
+/* floating year bubble above the handle you're dragging (a live readout of where it will settle) */
+function bubbleFor(rangeInput) {
+  const dual = rangeInput.closest('.range-dual'); if (!dual) return null;
+  return dual.querySelector(rangeInput.classList.contains('range-lo') ? '.range-bubble-lo' : '.range-bubble-hi');
+}
+function showBubble(rangeInput) { const b = bubbleFor(rangeInput); if (b) { syncRange(rangeInput); b.classList.add('show'); } }
+function hideBubbles() { els.entry.querySelectorAll('.range-bubble.show').forEach(b => b.classList.remove('show')); }
 /* year typed directly into the text field: clamp, push to the slider handle, commit */
 function setYearFromText(input) {
   const dual = els.entry.querySelector('.range-dual'); if (!dual) return;
@@ -586,7 +625,9 @@ function stepYear(which, dir) {
 }
 function selectPeriod(i) {
   state.selectedPeriod = i;
-  els.entry.querySelectorAll('.tl-node').forEach((n, idx) => n.classList.toggle('active', idx === i));
+  const nodes = els.entry.querySelectorAll('.tl-node');
+  nodes.forEach((n, idx) => n.classList.toggle('active', idx === i));
+  if (nodes[i] && !prefersReducedMotion()) nodes[i].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   const periods = displayEntry(state.selectedId).periods || [];
   const focus = els.entry.querySelector('.period-focus');
   if (periods[i] && focus) { const tmp = document.createElement('div'); tmp.innerHTML = renderFocus(periods[i], i); focus.replaceWith(tmp.firstElementChild); }
@@ -806,16 +847,22 @@ function bind() {
   $('save-banner-dl').addEventListener('click', downloadStudy);
 
   els.search.addEventListener('input', e => { state.search = e.target.value; persistLocal(); renderIndex(); });
-  els.filters.addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; state.filter = b.dataset.filter; persistLocal(); renderIndex(); });
+  els.filters.addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; state.filter = b.dataset.filter; persistLocal(); renderIndex(true); });
   els.themeFilter.addEventListener('change', e => { state.themeFilter = e.target.value || 'all'; persistLocal(); renderIndex(); });
   els.entryList.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) selectEntry(b.dataset.id); });
 
-  // the year slider is the only editable field; live-sync its fill/readout while dragging
+  // the year slider is the only editable field; live-sync its fill/readout + value bubble while dragging
   els.entry.addEventListener('input', e => {
     if (!e.target.matches('input[data-path]')) return;
-    if (e.target.type === 'range') syncRange(e.target);
+    if (e.target.type === 'range') { syncRange(e.target); showBubble(e.target); }
     commitFieldDebounced(e.target);
   });
+  // pop the year bubble up while a handle is grabbed or keyboard-focused, hide it on release/blur
+  els.entry.addEventListener('pointerdown', e => { const r = e.target.closest('input[type=range]'); if (r) showBubble(r); });
+  els.entry.addEventListener('focusin', e => { const r = e.target.closest('input[type=range]'); if (r) showBubble(r); });
+  els.entry.addEventListener('focusout', e => { if (e.target.closest('input[type=range]')) hideBubbles(); });
+  document.addEventListener('pointerup', hideBubbles);
+  document.addEventListener('pointercancel', hideBubbles);
   // year typed into the text box (commit on Enter / blur)
   els.entry.addEventListener('change', e => { const yi = e.target.closest('.yr-input'); if (yi) setYearFromText(yi); });
   els.entry.addEventListener('keydown', e => { if (e.target.classList.contains('yr-input') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });

@@ -271,6 +271,11 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .range-dual input[type=range]::-moz-range-thumb{ pointer-events:auto; width:18px; height:18px; border-radius:50%; background:#fff; border:2px solid var(--accent); box-shadow:0 2px 6px rgba(26,26,24,.28); cursor:grab; }
 .range-dual input[type=range]:focus-visible::-webkit-slider-thumb{ box-shadow:0 0 0 4px var(--accent-soft); }
 .range-dual input[type=range]:focus-visible::-moz-range-thumb{ box-shadow:0 0 0 4px var(--accent-soft); }
+/* live value bubble that floats above the handle you are dragging (inset 9px to track the thumb) */
+.range-bubbles{ position:absolute; top:18px; left:9px; right:9px; height:0; pointer-events:none; z-index:4; }
+.range-bubble{ position:absolute; bottom:12px; transform:translate(-50%,8px) scale(.7); transform-origin:50% 120%; background:var(--accent); color:#fff; font-size:.82rem; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:.02em; padding:.2rem .55rem; border-radius:8px; box-shadow:0 6px 16px -6px rgba(200,90,58,.7); opacity:0; transition:opacity .16s var(--ease), transform .16s var(--ease); white-space:nowrap; }
+.range-bubble::after{ content:''; position:absolute; left:50%; bottom:-4px; width:8px; height:8px; background:var(--accent); transform:translateX(-50%) rotate(45deg); border-radius:1px; }
+.range-bubble.show{ opacity:1; transform:translate(-50%,0) scale(1); }
 
 /* the meaning: the engaging focal point; scrolls internally if long so the rest stays put */
 .pf-meaning-wrap{ flex:1 1 auto; min-height:0; overflow-y:auto; position:relative; padding:.85rem 1.1rem .9rem 1.3rem; background:linear-gradient(180deg, rgba(200,90,58,.06), rgba(200,90,58,.02)); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; scrollbar-width:thin; }
@@ -455,8 +460,35 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
   .intro-fields{ grid-template-columns:1fr; }
   .top-progress{ display:none; }
 }
+/* ============================================================
+   MICRO-INTERACTIONS  (JS-toggled classes; all neutralised by the
+   prefers-reduced-motion block below)
+   ============================================================ */
+/* save heartbeat: the status dot rings out softly each time work settles */
+.save-dot.just-saved i{ animation:saveBeat .55s var(--ease); }
+@keyframes saveBeat{ 0%{ box-shadow:0 0 0 0 rgba(42,125,79,.5); transform:scale(1);} 40%{ transform:scale(1.5);} 70%{ box-shadow:0 0 0 6px rgba(42,125,79,0);} 100%{ box-shadow:0 0 0 0 rgba(42,125,79,0); transform:scale(1);} }
+
+/* Likert / source dot ripple when a rating is picked (ring uses that dot's colour) */
+.likert-dot.ripple::after, .src-dot.ripple::after{ content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none; animation:dotRipple .55s var(--ease); }
+@keyframes dotRipple{ 0%{ box-shadow:0 0 0 1px var(--c);} 100%{ box-shadow:0 0 0 13px rgba(200,90,58,0);} }
+
+/* completion: timeline dots sweep left-to-right, a checkmark pops in the middle */
+.tl-rail.celebrate .tl-dot{ animation:dotWave .55s var(--ease); animation-delay:calc(var(--i)*70ms); }
+@keyframes dotWave{ 0%{ transform:scale(1);} 35%{ transform:scale(1.45);} 100%{ transform:scale(1);} }
+.complete-burst{ position:fixed; left:50%; top:44%; z-index:80; pointer-events:none; color:var(--approve); animation:burstFade 1.05s var(--ease) forwards; }
+.complete-burst svg{ width:104px; height:104px; fill:none; }
+.complete-burst circle{ stroke:var(--approve); stroke-width:1.5; opacity:.35; }
+.complete-burst path{ stroke:var(--approve); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .5s var(--ease) .12s forwards; }
+@keyframes burstFade{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.6);} 18%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 75%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{ opacity:0; transform:translate(-50%,-50%) scale(1.08);} }
+@keyframes checkDraw{ to{ stroke-dashoffset:0; } }
+
+/* left index rows enter with a gentle stagger (only when the list changes wholesale) */
+.entry-list.stagger .entry-item{ animation:rowIn .34s var(--ease) both; animation-delay:calc(var(--r)*24ms); }
+@keyframes rowIn{ from{ opacity:0; transform:translateX(-8px);} to{ opacity:1; transform:none;} }
+
 @media (prefers-reduced-motion:reduce){
   *{ animation-duration:.001ms !important; animation-delay:0ms !important; transition-duration:.001ms !important; }
   .reveal{ opacity:1; transform:none; }
   .video-grid{ filter:blur(18px) saturate(0) brightness(.6); }
+  .complete-burst{ display:none; }
 }
