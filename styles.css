@@ -273,7 +273,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .range-dual input[type=range]:focus-visible::-moz-range-thumb{ box-shadow:0 0 0 4px var(--accent-soft); }
 /* live value bubble that floats above the handle you are dragging (inset 9px to track the thumb) */
 .range-bubbles{ position:absolute; top:18px; left:9px; right:9px; height:0; pointer-events:none; z-index:4; }
-.range-bubble{ position:absolute; bottom:12px; transform:translate(-50%,8px) scale(.7); transform-origin:50% 120%; background:var(--accent); color:#fff; font-size:.82rem; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:.02em; padding:.2rem .55rem; border-radius:8px; box-shadow:0 6px 16px -6px rgba(200,90,58,.7); opacity:0; transition:opacity .16s var(--ease), transform .16s var(--ease); white-space:nowrap; }
+.range-bubble{ position:absolute; bottom:12px; transform:translate(-50%,8px) scale(.7); transform-origin:50% 120%; background:var(--accent); color:#fff; font-size:.82rem; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:.02em; padding:.2rem .55rem; border-radius:8px; box-shadow:0 6px 16px -6px rgba(200,90,58,.7); opacity:0; transition:opacity .24s var(--ease), transform .24s var(--ease); white-space:nowrap; }
 .range-bubble::after{ content:''; position:absolute; left:50%; bottom:-4px; width:8px; height:8px; background:var(--accent); transform:translateX(-50%) rotate(45deg); border-radius:1px; }
 .range-bubble.show{ opacity:1; transform:translate(-50%,0) scale(1); }
 
@@ -465,25 +465,25 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
    prefers-reduced-motion block below)
    ============================================================ */
 /* save heartbeat: the status dot rings out softly each time work settles */
-.save-dot.just-saved i{ animation:saveBeat .55s var(--ease); }
+.save-dot.just-saved i{ animation:saveBeat .9s var(--ease); }
 @keyframes saveBeat{ 0%{ box-shadow:0 0 0 0 rgba(42,125,79,.5); transform:scale(1);} 40%{ transform:scale(1.5);} 70%{ box-shadow:0 0 0 6px rgba(42,125,79,0);} 100%{ box-shadow:0 0 0 0 rgba(42,125,79,0); transform:scale(1);} }
 
 /* Likert / source dot ripple when a rating is picked (ring uses that dot's colour) */
-.likert-dot.ripple::after, .src-dot.ripple::after{ content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none; animation:dotRipple .55s var(--ease); }
+.likert-dot.ripple::after, .src-dot.ripple::after{ content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none; animation:dotRipple .85s var(--ease); }
 @keyframes dotRipple{ 0%{ box-shadow:0 0 0 1px var(--c);} 100%{ box-shadow:0 0 0 13px rgba(200,90,58,0);} }
 
 /* completion: timeline dots sweep left-to-right, a checkmark pops in the middle */
-.tl-rail.celebrate .tl-dot{ animation:dotWave .55s var(--ease); animation-delay:calc(var(--i)*70ms); }
+.tl-rail.celebrate .tl-dot{ animation:dotWave .8s var(--ease); animation-delay:calc(var(--i)*100ms); }
 @keyframes dotWave{ 0%{ transform:scale(1);} 35%{ transform:scale(1.45);} 100%{ transform:scale(1);} }
-.complete-burst{ position:fixed; left:50%; top:44%; z-index:80; pointer-events:none; color:var(--approve); animation:burstFade 1.05s var(--ease) forwards; }
+.complete-burst{ position:fixed; left:50%; top:44%; z-index:80; pointer-events:none; color:var(--approve); animation:burstFade 1.6s var(--ease) forwards; }
 .complete-burst svg{ width:104px; height:104px; fill:none; }
 .complete-burst circle{ stroke:var(--approve); stroke-width:1.5; opacity:.35; }
-.complete-burst path{ stroke:var(--approve); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .5s var(--ease) .12s forwards; }
+.complete-burst path{ stroke:var(--approve); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .75s var(--ease) .2s forwards; }
 @keyframes burstFade{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.6);} 18%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 75%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{ opacity:0; transform:translate(-50%,-50%) scale(1.08);} }
 @keyframes checkDraw{ to{ stroke-dashoffset:0; } }
 
 /* left index rows enter with a gentle stagger (only when the list changes wholesale) */
-.entry-list.stagger .entry-item{ animation:rowIn .34s var(--ease) both; animation-delay:calc(var(--r)*24ms); }
+.entry-list.stagger .entry-item{ animation:rowIn .5s var(--ease) both; animation-delay:calc(var(--r)*34ms); }
 @keyframes rowIn{ from{ opacity:0; transform:translateX(-8px);} to{ opacity:1; transform:none;} }
 
 @media (prefers-reduced-motion:reduce){

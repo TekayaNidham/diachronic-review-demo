@@ -508,7 +508,7 @@ function setRating(v) {
   updatePeriodNode(i); updateLikertUI();
   if (set) {
     replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
-    if (topicStatus(id) === 'done' && was !== 'done') { celebrateCompletion(); setTimeout(() => { toast('every era rated ✦ moving on'); goNextPending(); }, 900); }
+    if (topicStatus(id) === 'done' && was !== 'done') { celebrateCompletion(); setTimeout(() => { toast('every era rated ✦ moving on'); goNextPending(); }, 1400); }
     else { const nxt = nextUndecided(id, i); if (nxt >= 0) setTimeout(() => selectPeriod(nxt), 300); }
   }
 }
@@ -518,12 +518,12 @@ function celebrateCompletion() {
   // the dots wave with a per-dot stagger, so hold the class for the full sweep
   // (replayAnim would strip it on the first dot's animationend and cut the rest short)
   const rail = els.entry.querySelector('.tl-rail');
-  if (rail) { rail.classList.remove('celebrate'); void rail.offsetWidth; rail.classList.add('celebrate'); setTimeout(() => rail.classList.remove('celebrate'), 1300); }
+  if (rail) { rail.classList.remove('celebrate'); void rail.offsetWidth; rail.classList.add('celebrate'); setTimeout(() => rail.classList.remove('celebrate'), 1900); }
   const burst = document.createElement('div');
   burst.className = 'complete-burst';
   burst.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
   document.body.appendChild(burst);
-  setTimeout(() => burst.remove(), 1100);
+  setTimeout(() => burst.remove(), 1650);
 }
 /* rate a source's relevance (1..5); click the same value again to clear it */
 function setSourceRating(i, v) {
