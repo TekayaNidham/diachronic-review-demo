@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=2026-07-09-gallery">
+<link rel="stylesheet" href="styles.css?v=2026-07-20-side2">
 </head>
 <body data-screen="intro">
 
@@ -65,7 +65,7 @@
     </div>
     <div class="top-right">
       <button type="button" class="help-btn" id="help-btn" data-tip="Replay the quick tour of the basics.">help</button>
-      <a class="add-link" href="add.html" data-tip="Propose a new diachronic on its own page: a quick free-text note, or a full era-by-era breakdown.">+ add diachronic</a>
+      <!-- add-diachronic entry point hidden for this iteration (add.html kept for later) -->
       <div class="menu">
         <button type="button" class="menu-btn" id="menu-btn" aria-haspopup="true" aria-expanded="false" data-tip="Your account: download or resume a study file, or start over."><span id="expert-initials">··</span></button>
         <div class="menu-pop" id="menu-pop" hidden>
@@ -84,12 +84,11 @@
         <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <input id="search" type="search" placeholder="search  ( / )" autocomplete="off">
       </div>
-      <div class="index-filters" id="filters" role="group" aria-label="Filter" data-tip="Narrow the list by review state: pending, approved, rejected, or ones you edited.">
+      <div class="index-filters" id="filters" role="group" aria-label="Filter" data-tip="Narrow the list by review state: not started, in progress, or finished.">
         <button class="chip active" data-filter="all">all</button>
-        <button class="chip" data-filter="pending">pending</button>
-        <button class="chip" data-filter="approved">approved</button>
-        <button class="chip" data-filter="rejected">rejected</button>
-        <button class="chip" data-filter="changed">edited</button>
+        <button class="chip" data-filter="pending">to do</button>
+        <button class="chip" data-filter="started">in progress</button>
+        <button class="chip" data-filter="done">done</button>
       </div>
       <label class="theme-select"><select id="theme-filter" aria-label="Theme"><option value="all">all themes</option></select></label>
       <nav id="entry-list" class="entry-list" aria-label="Diachronic entries"></nav>
@@ -98,18 +97,9 @@
     <main class="stage" id="stage">
       <article id="entry" class="entry" tabindex="-1"></article>
     </main>
+    <aside class="side" id="side" aria-label="Sources and notes"></aside>
   </div>
 
-</div>
-
-<!-- decision bar: direct child of <body> so it stays pinned to the viewport bottom -->
-<div class="decisionbar" id="decisionbar">
-  <div class="db-inner" data-tip="Your verdict: Approve (A) accepts it, Reject (R) marks it wrong, Skip (S) leaves it undecided. Approve/Reject jump to the next pending one.">
-    <button type="button" class="verdict reject" data-action="decision" data-decision="rejected">✗ reject <kbd>R</kbd></button>
-    <button type="button" class="verdict skip" data-action="next">skip <kbd>S</kbd></button>
-    <button type="button" class="verdict approve" data-action="decision" data-decision="approved">✓ approve <kbd>A</kbd></button>
-  </div>
-  <div class="db-hint">↑↓ move · <kbd>C</kbd> note · <kbd>⏎</kbd> next pending</div>
 </div>
 
 <input id="study-file" type="file" accept="application/json,.json" hidden>
@@ -140,6 +130,6 @@
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="app.js?v=2026-07-09-gallery"></script>
+<script src="app.js?v=2026-07-20-side2"></script>
 </body>
 </html>

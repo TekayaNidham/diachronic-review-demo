@@ -58,11 +58,41 @@ function expertName() { return state.expert ? `${state.expert.first_name} ${stat
 function original(id) { return state.originals.get(String(id)); }
 function reviewFor(id) {
   const k = String(id);
-  if (!state.reviews[k]) state.reviews[k] = { decision: 'pending', comment: '', comments: [], edited: false, entry: clone(original(id)) };
+  if (!state.reviews[k]) state.reviews[k] = { decision: 'pending', comment: '', comments: [], edited: false, period_decisions: {}, source_decisions: {}, entry: clone(original(id)) };
   if (!state.reviews[k].entry) state.reviews[k].entry = clone(original(id));
+  if (!state.reviews[k].period_decisions) state.reviews[k].period_decisions = {};
+  if (!state.reviews[k].source_decisions) state.reviews[k].source_decisions = {};
   return state.reviews[k];
 }
-function reviewSnapshot(id) { return state.reviews[String(id)] || { decision: 'pending', comment: '', comments: [], edited: false, entry: original(id) }; }
+function reviewSnapshot(id) { return state.reviews[String(id)] || { decision: 'pending', comment: '', comments: [], edited: false, period_decisions: {}, entry: original(id) }; }
+
+/* ---------- per-period ratings (Likert: 1 incorrect/delete … 5 correct/approve) ---------- */
+const LIKERT = [
+  { v: 1, label: 'incorrect', end: 'delete' },
+  { v: 2, label: 'mostly wrong' },
+  { v: 3, label: 'unsure' },
+  { v: 4, label: 'mostly right' },
+  { v: 5, label: 'correct', end: 'approve' }
+];
+function likertLabel(v) { const o = LIKERT.find(x => x.v === Number(v)); return o ? o.label : ''; }
+function likertClass(v) { return 'lv' + Number(v); }
+const YEAR_MIN = 1830, YEAR_MAX = 2030;
+function periodDecisions(id) { const r = state.reviews[String(id)]; return (r && r.period_decisions) || {}; }
+function periodRating(id, i) { const v = periodDecisions(id)[i]; return v == null ? null : Number(v); }
+function periodCount(id) { return (displayEntry(id).periods || []).length; }
+function decidedCount(id) { const pd = periodDecisions(id), n = periodCount(id); let c = 0; for (let i = 0; i < n; i++) if (pd[i]) c++; return c; }
+/* topic lifecycle: 'pending' (untouched) · 'started' (some eras judged) · 'done' (all judged) */
+function topicStatus(id) { const n = periodCount(id); if (!n) return 'pending'; const d = decidedCount(id); if (d === 0) return 'pending'; return d >= n ? 'done' : 'started'; }
+function nextUndecided(id, from) {
+  const n = periodCount(id), pd = periodDecisions(id);
+  for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (!pd[i]) return i; }
+  return -1;
+}
+/* ---------- per-source relevance ratings (same 1..5 ramp: irrelevant/delete … very relevant/approve) ---------- */
+function sourceDecisions(id) { const r = state.reviews[String(id)]; return (r && r.source_decisions) || {}; }
+function sourceRating(id, i) { const v = sourceDecisions(id)[i]; return v == null ? null : Number(v); }
+const SRC_LABELS = { 1: 'irrelevant', 2: 'mostly irrelevant', 3: 'unsure', 4: 'relevant', 5: 'very relevant' };
+function srcLabel(v) { return SRC_LABELS[Number(v)] || ''; }
 function workingEntry(id) { return reviewFor(id).entry; }
 function displayEntry(id) { const r = state.reviews[String(id)]; return (r && r.entry) || original(id); }
 function statusFor(id) { return reviewSnapshot(id).decision || 'pending'; }
@@ -101,9 +131,15 @@ function persist() {
 }
 function hasWork() {
   const c = counts();
-  if (c.approved + c.rejected + c.edited > 0) return true;
+  if (c.done + c.started > 0) return true;
   if ((state.suggestions || []).length) return true;
-  return Object.values(state.reviews || {}).some(r => r && ((r.comments && r.comments.length) || (r.comment && String(r.comment).trim())));
+  return Object.values(state.reviews || {}).some(r => r && (
+    (r.period_decisions && Object.keys(r.period_decisions).length) ||
+    (r.source_decisions && Object.keys(r.source_decisions).length) ||
+    r.edited ||
+    (r.comments && r.comments.length) ||
+    (r.comment && String(r.comment).trim())
+  ));
 }
 function backupNow(reason) { try { localStorage.setItem(BACKUP_KEY, JSON.stringify({ reason, at: nowIso(), snapshot: snapshot() })); } catch (_) {} }
 function hasBackup() { try { return Boolean(localStorage.getItem(BACKUP_KEY)); } catch { return false; } }
@@ -178,7 +214,8 @@ function applyStudy(data) {
 /* ---------- stats / filter ---------- */
 function counts() {
   const ids = state.entries.map(e => e.id);
-  return { total: ids.length, approved: ids.filter(id => statusFor(id) === 'approved').length, rejected: ids.filter(id => statusFor(id) === 'rejected').length, pending: ids.filter(id => statusFor(id) === 'pending').length, edited: ids.filter(isEdited).length };
+  const st = ids.map(topicStatus);
+  return { total: ids.length, done: st.filter(s => s === 'done').length, started: st.filter(s => s === 'started').length, pending: st.filter(s => s === 'pending').length };
 }
 function haystack(entry) {
   const e = displayEntry(entry.id);
@@ -187,9 +224,9 @@ function haystack(entry) {
 function filtered() {
   const q = state.search.trim().toLowerCase();
   return state.entries.filter(entry => {
-    const id = entry.id, st = statusFor(id);
+    const id = entry.id, st = topicStatus(id);
     const themeOk = state.themeFilter === 'all' || themeForEntry(entry) === state.themeFilter;
-    const filterOk = state.filter === 'all' || state.filter === st || (state.filter === 'changed' && isEdited(id));
+    const filterOk = state.filter === 'all' || state.filter === st;
     const searchOk = !q || haystack(entry).includes(q);
     return themeOk && filterOk && searchOk;
   });
@@ -205,9 +242,9 @@ function render() {
   renderTop(); renderIndex(); renderEntry();
 }
 function renderTop() {
-  const c = counts(), decided = c.approved + c.rejected, pct = c.total ? Math.round((decided / c.total) * 100) : 0;
+  const c = counts(), pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
   if (els.pbarFill) els.pbarFill.style.width = pct + '%';
-  if (els.progressLabel) els.progressLabel.textContent = `${decided} / ${c.total} decided · ${c.edited} edited`;
+  if (els.progressLabel) els.progressLabel.textContent = `${c.done} / ${c.total} reviewed${c.started ? ` · ${c.started} in progress` : ''}`;
   if (els.menuName) els.menuName.textContent = `${state.expert.first_name} ${state.expert.last_name}`;
   if (els.expertInitials) els.expertInitials.textContent = (state.expert.first_name[0] || '') + (state.expert.last_name[0] || '');
 }
@@ -221,12 +258,15 @@ function renderIndex() {
   els.themeFilter.value = state.themeFilter;
   const list = filtered();
   if (!list.length) { els.entryList.innerHTML = '<div class="empty">no diachronics match.</div>'; return; }
-  if (!list.some(e => String(e.id) === String(state.selectedId))) state.selectedId = list[0].id;
+  // keep the current selection even if a filter would hide it (e.g. it just moved from "to do" to "in progress"),
+  // so a review in progress is never yanked away; only pick a default when nothing is selected yet.
+  if (state.selectedId == null) state.selectedId = list[0].id;
   els.entryList.innerHTML = list.map((entry, idx) => {
-    const e = displayEntry(entry.id), st = statusFor(entry.id);
+    const e = displayEntry(entry.id), st = topicStatus(entry.id);
+    const n = (e.periods || []).length, d = decidedCount(entry.id);
     const sel = String(entry.id) === String(state.selectedId) ? ' selected' : '';
-    const meta = [`#${esc(entry.id)}`, `${(e.periods || []).length} periods`];
-    if (isEdited(entry.id)) meta.push('<span class="edited">edited</span>');
+    const progress = st === 'done' ? `${n} eras reviewed` : st === 'started' ? `<span class="edited">${d}/${n} eras</span>` : `${n} eras`;
+    const meta = [`#${esc(entry.id)}`, progress];
     if (hasComment(entry.id)) meta.push('noted');
     const tip = idx === 0 ? ' data-tip="Click any diachronic to review it. Use ↑ ↓ (or J / K) to move down the list."' : '';
     return `<button class="entry-item${sel}" data-id="${entry.id}"${tip}>
@@ -236,87 +276,135 @@ function renderIndex() {
   }).join('');
 }
 function renderEntry() {
-  if (!state.entries.length) { els.entry.innerHTML = '<div class="empty">load a corpus to begin.</div>'; return; }
+  if (!state.entries.length) { els.entry.innerHTML = '<div class="empty">load a corpus to begin.</div>'; renderSide(); return; }
   const entry = displayEntry(state.selectedId);
-  if (!entry) { els.entry.innerHTML = '<div class="empty">select a diachronic.</div>'; return; }
-  const review = reviewSnapshot(state.selectedId);
-  const periods = entry.periods || [], sources = entry.sources || [];
+  if (!entry) { els.entry.innerHTML = '<div class="empty">select a diachronic.</div>'; renderSide(); return; }
+  const periods = entry.periods || [];
   if (state.selectedPeriod >= periods.length) state.selectedPeriod = 0;
-  const decided = review.decision === 'approved' ? '<span class="decided approved">approved</span>'
-    : review.decision === 'rejected' ? '<span class="decided rejected">rejected</span>' : '';
+  const st = topicStatus(state.selectedId);
+  const pill = st === 'done' ? '<span class="decided approved">review complete</span>'
+    : st === 'started' ? `<span class="decided started">${decidedCount(state.selectedId)} / ${periods.length} eras reviewed</span>` : '';
+  const tags = [];
+  if (entry.category) tags.push(`<span class="k-tag">${esc(entry.category)}</span>`);
+  if (entry.shift_type) tags.push(`<span class="k-tag accent">${esc(entry.shift_type)} shift</span>`);
   els.entry.innerHTML = `
-    <div class="entry-kicker">
-      <span class="k-label">entry #${esc(entry.id)}</span>
-      <input class="k-input" data-path="category" list="cat-list" value="${esc(entry.category || '')}" placeholder="category" data-tip="Set the category, e.g. Fashion & Clothing. Editable, saves automatically.">
-      <select class="k-select" data-path="shift_type" data-tip="Pick the type of shift: how the meaning changed over time (linear, cyclical, u-shaped, accumulative).">${shiftOptions(entry.shift_type)}</select>
-      ${decided}
+    <div class="topic-head">
+      <div class="entry-kicker"><span class="k-label">entry #${esc(entry.id)}</span>${tags.join('')}${pill}</div>
+      <h1 class="entry-title">${esc(entry.visual_element || 'untitled')}</h1>
+      ${entry.annotation ? `<p class="entry-lede">${esc(entry.annotation)}</p>` : ''}
     </div>
-    <datalist id="cat-list">${categoryDatalist()}</datalist>
-    <h1 class="entry-title" contenteditable data-path="visual_element" data-placeholder="visual phenomenon" data-tip="Click to rename this phenomenon. Edits save automatically.">${esc(entry.visual_element || '')}</h1>
-    <p class="entry-lede" contenteditable data-path="annotation" data-placeholder="how the meaning shifted overall" data-tip="The overall summary: click to edit how the meaning shifted across the whole timeline.">${esc(entry.annotation || '')}</p>
-
-    <section class="sec periods-sec">
-      <div class="sec-head"><h3>how the meaning changed over time</h3><div class="sec-head-right"><span class="sub">${periods.length} periods</span><button class="mini-add" data-action="add-period">+ period</button></div></div>
-      <div class="tl-rail" data-tip="Each dot is an era. Click one to read and edit what the element meant then.">${periods.map(renderNode).join('')}</div>
-      ${periods.length ? renderFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no periods yet, add one.</div>'}
-    </section>
-
-    <section class="sec">
-      <div class="sec-head"><h3>sources</h3><div class="sec-head-right"><span class="sub">${sources.length} listed</span><button class="mini-add" data-action="add-source">+ source</button></div></div>
-      <div class="sources">${sources.length ? sources.map(renderSource).join('') : '<div class="empty">no sources listed.</div>'}</div>
-    </section>
-
-    <section class="sec" id="notes-sec">${notesInner(state.selectedId)}</section>`;
+    <div class="tl-rail" data-tip="Each dot is an era. Green means you approved it, red disapproved, hollow means still to judge. Click a dot to jump to it.">${periods.map(renderNode).join('')}</div>
+    ${periods.length ? renderFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no eras recorded for this diachronic.</div>'}`;
+  renderSide();
+  initRanges();
 }
 function renderNode(period, i) {
-  const changed = isPeriodChanged(state.selectedId, i) ? ' changed' : '';
+  const v = periodRating(state.selectedId, i);
+  const cls = v != null ? ` rated ${likertClass(v)}` : '';
   const active = i === state.selectedPeriod ? ' active' : '';
-  return `<button class="tl-node${active}${changed}" style="--i:${i}" data-period="${i}">
+  return `<button class="tl-node${active}${cls}" style="--i:${i}" data-period="${i}">
     <span class="tl-dot"></span>
     <span class="tl-years">${esc(yearsLabel(period))}</span>
-    <span class="tl-period">${esc(period.period || '')}</span>
-    <span class="tl-ctx">${esc(period.context || 'period ' + (i + 1))}</span>
+    <span class="tl-ctx">${esc(period.context || period.period || 'era ' + (i + 1))}</span>
   </button>`;
 }
 function renderFocus(period, i) {
-  return `<div class="period-focus">
-    <div class="pf-index">${String(i + 1).padStart(2, '0')}</div>
-    <div class="pf-grid">
-      <div class="pf-field pf-year"><label>from</label><input type="number" data-path="periods.${i}.year_start" value="${period.year_start ?? ''}"></div>
-      <div class="pf-field pf-year"><label>to</label><input type="number" data-path="periods.${i}.year_end" value="${period.year_end ?? ''}"></div>
-      <div class="pf-field wide"><label>era label</label><input data-path="periods.${i}.period" value="${esc(period.period || '')}"></div>
+  const v = periodRating(state.selectedId, i);
+  const badge = v == null ? '<span class="pf-verdict pending">not yet rated</span>'
+    : `<span class="pf-verdict ${likertClass(v)}">rated: ${esc(likertLabel(v))}</span>`;
+  const a = period.year_start != null ? period.year_start : YEAR_MIN;
+  const b = period.year_end != null ? period.year_end : YEAR_MAX;
+  const dots = LIKERT.map(o =>
+    `<button class="likert-dot ${likertClass(o.v)}${o.v === v ? ' on' : ''}" data-likert="${o.v}" title="${esc(o.label)}" aria-label="${esc(o.label)}"><span></span></button>`
+  ).join('');
+  return `<div class="period-focus" data-rating="${v || 'pending'}">
+    <div class="pf-top">
+      <div class="pf-index">era ${i + 1} <span>of ${periodCount(state.selectedId)}</span></div>
+      ${badge}
     </div>
-    <div class="pf-field pf-context-field"><label>context</label><input data-path="periods.${i}.context" value="${esc(period.context || '')}"></div>
-    <div class="pf-meaning-wrap">
+    <div class="pf-years" data-tip="Drag the handles along the timeline, or use the − / + buttons, to correct the era's start and end year. This is the only thing on the page you can change.">
+      <div class="year-steppers">
+        <div class="year-box"><label>from</label><button type="button" class="step-btn" data-step="start" data-dir="-1" aria-label="earlier start">−</button><input type="number" inputmode="numeric" class="yr-input yr-from" data-year="start" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${a}" aria-label="start year"><button type="button" class="step-btn" data-step="start" data-dir="1" aria-label="later start">+</button></div>
+        <div class="year-box"><label>to</label><button type="button" class="step-btn" data-step="end" data-dir="-1" aria-label="earlier end">−</button><input type="number" inputmode="numeric" class="yr-input yr-to" data-year="end" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${b}" aria-label="end year"><button type="button" class="step-btn" data-step="end" data-dir="1" aria-label="later end">+</button></div>
+        ${period.context ? `<div class="pf-ctx">${esc(period.context)}</div>` : ''}
+      </div>
+      <div class="timeline-slider range-dual" data-min="${YEAR_MIN}" data-max="${YEAR_MAX}">
+        <div class="range-track"><div class="range-fill"></div></div>
+        <div class="ts-ticks">${yearTicks(YEAR_MIN, YEAR_MAX)}</div>
+        <input type="range" class="range-lo" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" value="${a}" data-path="periods.${i}.year_start" aria-label="start year">
+        <input type="range" class="range-hi" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" value="${b}" data-path="periods.${i}.year_end" aria-label="end year">
+      </div>
+    </div>
+    <div class="pf-meaning-wrap" data-tip="Read how the element's meaning is described for this era, then rate the description below.">
       <div class="pf-meaning-label">what it meant then</div>
-      <div class="pf-meaning" contenteditable data-path="periods.${i}.meaning" data-placeholder="describe the meaning in this era" data-tip="This is the heart of the review: click to refine how the meaning read in this era.">${esc(period.meaning || '')}</div>
+      <div class="pf-meaning">${esc(period.meaning || 'no description recorded for this era.')}</div>
     </div>
-    <div class="pf-actions">
-      <button class="pf-btn" data-action="move-period" data-index="${i}" data-dir="up">← earlier</button>
-      <button class="pf-btn" data-action="move-period" data-index="${i}" data-dir="down">later →</button>
-      <button class="pf-btn danger" data-action="remove-period" data-index="${i}">remove period</button>
+    <div class="pf-likert" data-tip="Rate how correct this description is, from incorrect (delete) to correct (approve). This judges the description above. Keys 1-5 also work.">
+      <div class="likert-q">how accurate is this description?</div>
+      <div class="likert-row">
+        <span class="likert-anchor left">incorrect<em>delete</em></span>
+        <div class="likert-scale"><div class="likert-line"></div>${dots}</div>
+        <span class="likert-anchor right">correct<em>approve</em></span>
+      </div>
     </div>
   </div>`;
 }
+function renderSide() {
+  if (!els.side) return;
+  const id = state.selectedId;
+  if (!state.entries.length || id == null) { els.side.innerHTML = ''; return; }
+  const sources = (displayEntry(id).sources || []);
+  els.side.innerHTML = `
+    <section class="side-sec">
+      <div class="side-head" data-tip="Rate each source for how relevant it is to this diachronic, from irrelevant (delete) to very relevant (approve)."><h3>sources</h3><span class="sub">${sources.length}</span></div>
+      <div class="sources">${sources.length ? sources.map(renderSource).join('') : '<div class="side-empty">no sources listed.</div>'}</div>
+    </section>
+    <section class="side-sec notes-sec" id="notes-sec">${notesInner(id)}</section>
+    <section class="side-sec bulk-sec">
+      <div class="side-head" data-tip="Judge the whole diachronic at once: rate every era correct, every era incorrect, or leave it for later."><h3>whole diachronic</h3></div>
+      <div class="bulk-actions">
+        <button type="button" class="bulk-btn approve" data-action="approve-all">approve all eras</button>
+        <button type="button" class="bulk-btn reject" data-action="reject-all">reject all eras</button>
+        <button type="button" class="bulk-btn skip" data-action="skip-topic">skip for now</button>
+      </div>
+    </section>`;
+}
 function renderSource(source, i) {
-  const links = [];
-  if (source.doi) links.push(`<a href="${esc(source.doi)}" target="_blank" rel="noopener">DOI</a>`);
-  if (source.url) links.push(`<a href="${esc(source.url)}" target="_blank" rel="noopener">link</a>`);
-  const bits = [];
-  if (source.verified) bits.push('<span class="verified">verified</span>');
-  if (source.tier != null && source.tier !== '') bits.push(`tier ${esc(source.tier)}`);
-  return `<div class="source">
-    <span class="source-num">${String(i + 1).padStart(2, '0')}</span>
-    <div class="source-body">
-      <div class="source-cite" contenteditable data-path="sources.${i}.citation" data-placeholder="citation">${esc(source.citation || '')}</div>
-      <div class="source-meta"><span contenteditable data-path="sources.${i}.url" data-placeholder="url">${esc(source.url || '')}</span>${bits.length ? ' · ' + bits.join(' · ') : ''}${links.length ? ' · ' + links.join(' · ') : ''}</div>
+  const meta = [];
+  if (source.verified) meta.push('<span class="verified">verified</span>');
+  if (source.tier != null && source.tier !== '') meta.push(`tier ${esc(source.tier)}`);
+  if (source.doi) meta.push(`<a href="${esc(source.doi)}" target="_blank" rel="noopener">DOI</a>`);
+  if (source.url) meta.push(`<a href="${esc(source.url)}" target="_blank" rel="noopener">link</a>`);
+  const v = sourceRating(state.selectedId, i);
+  const dots = LIKERT.map(o =>
+    `<button type="button" class="src-dot ${likertClass(o.v)}${o.v === v ? ' on' : ''}" data-src-idx="${i}" data-src-likert="${o.v}" title="${esc(srcLabel(o.v))}" aria-label="${esc(srcLabel(o.v))}"><span></span></button>`
+  ).join('');
+  const rank = v == null
+    ? '<span class="src-rank none">rate relevance</span>'
+    : `<span class="src-rank ${likertClass(v)}">${esc(srcLabel(v))}</span>`;
+  return `<div class="source" data-src="${i}" data-rating="${v || ''}">
+    <div class="source-top">
+      <span class="source-num">${String(i + 1).padStart(2, '0')}</span>
+      <div class="source-body">
+        <div class="source-cite">${esc(source.citation || 'untitled source')}</div>
+        ${meta.length ? `<div class="source-meta">${meta.join(' · ')}</div>` : ''}
+      </div>
     </div>
-    <button class="source-del" data-action="remove-source" data-index="${i}" title="Remove source">×</button>
+    <button type="button" class="src-toggle" data-src-toggle="${i}" aria-expanded="false">
+      ${rank}<span class="src-caret" aria-hidden="true">›</span>
+    </button>
+    <div class="src-likert">
+      <div class="src-row">
+        <span class="src-anchor left">irrelevant<em>delete</em></span>
+        <div class="src-scale"><div class="src-line"></div>${dots}</div>
+        <span class="src-anchor right">very relevant<em>approve</em></span>
+      </div>
+    </div>
   </div>`;
 }
 function notesInner(id) {
   const comments = commentsRead(id);
-  return `<div class="sec-head"><h3>reviewer notes</h3><span class="sub">${comments.length} comment${comments.length === 1 ? '' : 's'}</span></div>
+  return `<div class="side-head"><h3>user notes</h3><span class="sub">${comments.length} comment${comments.length === 1 ? '' : 's'}</span></div>
     <div class="comment-list">${comments.map(renderComment).join('')}</div>
     <div class="comment-compose" data-tip="Write a note, then press Comment or Enter (Shift+Enter for a new line). You can edit or delete your own comments.">
       <textarea id="comment-input" placeholder="add a note on this diachronic…"></textarea>
@@ -360,7 +448,7 @@ function isPeriodChanged(id, i) { const o = original(id), r = state.reviews[Stri
 function commitField(el) {
   const id = state.selectedId, entry = workingEntry(id), path = el.dataset.path;
   let val;
-  if (el.tagName === 'INPUT' && el.type === 'number') val = el.value === '' ? null : Number(el.value);
+  if (el.tagName === 'INPUT' && (el.type === 'number' || el.type === 'range')) val = el.value === '' ? null : Number(el.value);
   else if (el.isContentEditable) val = el.textContent;
   else val = el.value;
   setPath(entry, path, val); markEdited(id); persist();
@@ -375,9 +463,9 @@ function addComment() {
   syncCommentString(state.selectedId);
   persist(); refreshNotes(true); renderIndex();
 }
-function startEditComment(cid) { state.editingComment = cid; refreshNotes(); const box = els.entry.querySelector('.comment.editing .comment-edit-input'); if (box) { box.focus(); box.selectionStart = box.value.length; } }
+function startEditComment(cid) { state.editingComment = cid; refreshNotes(); const box = document.querySelector('.comment.editing .comment-edit-input'); if (box) { box.focus(); box.selectionStart = box.value.length; } }
 function saveComment(cid) {
-  const box = els.entry.querySelector(`.comment[data-cid="${cid}"] .comment-edit-input`);
+  const box = document.querySelector(`.comment[data-cid="${cid}"] .comment-edit-input`);
   const list = commentsFor(state.selectedId), c = list.find(x => x.id === cid);
   if (box && c) {
     const text = box.value.trim();
@@ -395,20 +483,106 @@ function deleteComment(cid) {
   persist(); refreshNotes(); renderIndex();
 }
 
-/* ---------- decisions & nav ---------- */
-function setDecision(decision) {
-  const id = state.selectedId, r = reviewFor(id);
-  const btn = els.decisionbar.querySelector(`.verdict.${decision === 'approved' ? 'approve' : 'reject'}`);
-  r.decision = r.decision === decision ? 'pending' : decision;
-  if (btn && r.decision !== 'pending') { btn.classList.remove('flash'); void btn.offsetWidth; btn.classList.add('flash'); }
+/* ---------- ratings & nav ---------- */
+/* each era gets a Likert rating (1..5) for how correct its description is, then advance */
+function setRating(v) {
+  const id = state.selectedId, n = periodCount(id);
+  if (!n) return;
+  const r = reviewFor(id), i = state.selectedPeriod, was = topicStatus(id);
+  const set = r.period_decisions[i] !== v;   // false means we are toggling it off
+  if (set) r.period_decisions[i] = v; else delete r.period_decisions[i];
   persist(); renderTop(); renderIndex();
-  const kicker = els.entry.querySelector('.entry-kicker');
-  if (kicker) {
-    kicker.querySelectorAll('.decided').forEach(n => n.remove());
-    if (r.decision === 'approved') kicker.insertAdjacentHTML('beforeend', '<span class="decided approved">approved</span>');
-    if (r.decision === 'rejected') kicker.insertAdjacentHTML('beforeend', '<span class="decided rejected">rejected</span>');
+  updatePeriodNode(i); updateLikertUI();
+  if (set) {
+    if (topicStatus(id) === 'done' && was !== 'done') { setTimeout(() => { toast('every era rated ✦ moving on'); goNextPending(); }, 540); }
+    else { const nxt = nextUndecided(id, i); if (nxt >= 0) setTimeout(() => selectPeriod(nxt), 300); }
   }
-  if (r.decision !== 'pending') setTimeout(goNextPending, 260);
+}
+/* rate a source's relevance (1..5); click the same value again to clear it */
+function setSourceRating(i, v) {
+  const id = state.selectedId, r = reviewFor(id);
+  if (r.source_decisions[i] === v) delete r.source_decisions[i]; else r.source_decisions[i] = v;
+  persist(); updateSourceUI(i);
+}
+function updateSourceUI(i) {
+  const v = sourceRating(state.selectedId, i);
+  els.side.querySelectorAll(`.src-dot[data-src-idx="${i}"]`).forEach(d => d.classList.toggle('on', Number(d.dataset.srcLikert) === v));
+  const src = els.side.querySelector(`.source[data-src="${i}"]`); if (src) src.dataset.rating = v || '';
+  const rank = src && src.querySelector('.src-rank');
+  if (rank) { rank.className = 'src-rank ' + (v == null ? 'none' : likertClass(v)); rank.textContent = v == null ? 'rate relevance' : srcLabel(v); }
+}
+/* whole-diachronic shortcuts: rate every era at once, then move on (like the old approve/reject) */
+function rateAll(v) {
+  const id = state.selectedId, n = periodCount(id); if (!n) { toast('no eras to rate.'); return; }
+  const r = reviewFor(id);
+  for (let i = 0; i < n; i++) r.period_decisions[i] = v;
+  persist(); renderTop(); renderIndex(); renderEntry();
+  toast(v >= 4 ? 'all eras approved ✦ moving on' : 'all eras marked incorrect ✦ moving on');
+  setTimeout(goNextPending, 480);
+}
+function skipTopic() { goNextPending(); }
+function updatePeriodNode(i) {
+  const node = els.entry.querySelectorAll('.tl-node')[i]; if (!node) return;
+  const v = periodRating(state.selectedId, i);
+  node.classList.remove('rated', 'lv1', 'lv2', 'lv3', 'lv4', 'lv5');
+  if (v != null) node.classList.add('rated', likertClass(v));
+}
+/* refresh the Likert selection + badge for the focused era without re-rendering (no anim thrash) */
+function updateLikertUI() {
+  const v = periodRating(state.selectedId, state.selectedPeriod);
+  els.entry.querySelectorAll('.likert-dot').forEach(d => d.classList.toggle('on', Number(d.dataset.likert) === v));
+  const wrap = els.entry.querySelector('.pf-likert'); if (wrap) wrap.classList.toggle('rated', v != null);
+  const focus = els.entry.querySelector('.period-focus'); if (focus) focus.dataset.rating = v || 'pending';
+  const badge = els.entry.querySelector('.pf-verdict');
+  if (badge) { badge.className = 'pf-verdict ' + (v == null ? 'pending' : likertClass(v)); badge.textContent = v == null ? 'not yet rated' : 'rated: ' + likertLabel(v); }
+}
+/* dual-handle year slider: clamp lo<=hi, paint the fill, sync the readout + timeline label */
+function syncRange(input) {
+  const dual = input.closest('.range-dual'); if (!dual) return;
+  const lo = dual.querySelector('.range-lo'), hi = dual.querySelector('.range-hi');
+  let a = Number(lo.value), b = Number(hi.value);
+  if (a > b) { if (input === lo) { a = b; lo.value = a; } else { b = a; hi.value = b; } }
+  const min = Number(dual.dataset.min), max = Number(dual.dataset.max), span = (max - min) || 1;
+  const fill = dual.querySelector('.range-fill');
+  const l = ((a - min) / span) * 100, r = ((b - min) / span) * 100;
+  if (fill) { fill.style.left = l + '%'; fill.style.width = Math.max(0, r - l) + '%'; }
+  const card = input.closest('.period-focus');
+  if (card) {
+    const f = card.querySelector('.yr-from'), t = card.querySelector('.yr-to');
+    if (f && f !== document.activeElement) f.value = a;
+    if (t && t !== document.activeElement) t.value = b;
+  }
+  const node = els.entry.querySelectorAll('.tl-node')[state.selectedPeriod];
+  if (node) { const s = node.querySelector('.tl-years'); if (s) s.textContent = `${a}-${b}`; }
+}
+/* year typed directly into the text field: clamp, push to the slider handle, commit */
+function setYearFromText(input) {
+  const dual = els.entry.querySelector('.range-dual'); if (!dual) return;
+  const range = dual.querySelector(input.dataset.year === 'start' ? '.range-lo' : '.range-hi'); if (!range) return;
+  const min = Number(dual.dataset.min), max = Number(dual.dataset.max);
+  let v = parseInt(input.value, 10);
+  if (isNaN(v)) { syncRange(range); return; }   // gibberish, restore the last good value
+  range.value = Math.max(min, Math.min(max, v));
+  input.blur();                                  // let syncRange refresh the field to the clamped value
+  syncRange(range); commitField(range);
+}
+function initRanges() { els.entry.querySelectorAll('.range-dual').forEach(dual => { const lo = dual.querySelector('.range-lo'); if (lo) syncRange(lo); }); }
+/* year axis: minor tick every 10 years, labelled major every 50 (1850 / 1900 / 1950 / 2000) */
+function yearTicks(min, max) {
+  const span = (max - min) || 1, out = [];
+  for (let y = Math.ceil(min / 10) * 10; y <= max; y += 10) {
+    const pct = ((y - min) / span) * 100, major = (y % 50 === 0);
+    out.push(`<span class="ts-tick${major ? ' major' : ''}" style="left:${pct}%">${major ? `<b>${y}</b>` : ''}</span>`);
+  }
+  return out.join('');
+}
+/* precise single-year nudge from the − / + buttons, mirrors dragging a handle */
+function stepYear(which, dir) {
+  const dual = els.entry.querySelector('.range-dual'); if (!dual) return;
+  const inp = dual.querySelector(which === 'start' ? '.range-lo' : '.range-hi'); if (!inp) return;
+  const min = Number(dual.dataset.min), max = Number(dual.dataset.max);
+  inp.value = Math.max(min, Math.min(max, Number(inp.value) + dir));
+  syncRange(inp); commitField(inp);
 }
 function selectPeriod(i) {
   state.selectedPeriod = i;
@@ -416,19 +590,32 @@ function selectPeriod(i) {
   const periods = displayEntry(state.selectedId).periods || [];
   const focus = els.entry.querySelector('.period-focus');
   if (periods[i] && focus) { const tmp = document.createElement('div'); tmp.innerHTML = renderFocus(periods[i], i); focus.replaceWith(tmp.firstElementChild); }
+  initRanges();
+}
+function stepPeriod(delta) {
+  const n = periodCount(state.selectedId); if (!n) return;
+  const i = Math.min(n - 1, Math.max(0, state.selectedPeriod + delta));
+  if (i !== state.selectedPeriod) selectPeriod(i);
+}
+/* never discard: leaving a half-rated diachronic just reminds you it isn't finished; progress is kept */
+function remindIfUnfinished(leavingId, targetId) {
+  if (leavingId == null || String(leavingId) === String(targetId)) return;
+  if (topicStatus(leavingId) !== 'started') return;
+  const e = displayEntry(leavingId), left = periodCount(leavingId) - decidedCount(leavingId);
+  toast(`"${e.visual_element}" isn't finished yet · ${left} era${left === 1 ? '' : 's'} left to rate. your progress is saved.`);
 }
 function selectEntry(id, { animate = true } = {}) {
+  remindIfUnfinished(state.selectedId, id);
   state.selectedId = id; state.selectedPeriod = 0; state.editingComment = null; persistLocal();
   renderIndex(); renderEntry();
   if (animate) { els.entry.classList.remove('swap'); void els.entry.offsetWidth; els.entry.classList.add('swap'); }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
   hideTip(); if (tour) layoutStep();
 }
 function goNextPending() {
   const rows = filtered(), i = rows.findIndex(e => String(e.id) === String(state.selectedId));
   const ordered = i >= 0 ? rows.slice(i + 1).concat(rows.slice(0, i + 1)) : rows;
-  const next = ordered.find(e => statusFor(e.id) === 'pending');
-  if (!next) { toast('no pending diachronics left in this view ✦'); return; }
+  const next = ordered.find(e => String(e.id) !== String(state.selectedId) && topicStatus(e.id) !== 'done');
+  if (!next) { toast('every diachronic in this view is reviewed ✦'); return; }
   selectEntry(next.id);
 }
 function stepEntry(delta) {
@@ -437,13 +624,6 @@ function stepEntry(delta) {
   const j = Math.min(rows.length - 1, Math.max(0, i + delta));
   if (rows[j]) selectEntry(rows[j].id);
 }
-
-/* ---------- period / source ops ---------- */
-function addPeriod() { const e = workingEntry(state.selectedId); if (!Array.isArray(e.periods)) e.periods = []; e.periods.push({ period: 'new era', year_start: null, year_end: null, context: '', meaning: '' }); state.selectedPeriod = e.periods.length - 1; markEdited(state.selectedId); persist(); renderEntry(); }
-function removePeriod(i) { const e = workingEntry(state.selectedId); if (!e.periods || !e.periods[i]) return; if (!confirm('Remove this period?')) return; e.periods.splice(i, 1); state.selectedPeriod = Math.max(0, i - 1); markEdited(state.selectedId); persist(); renderEntry(); }
-function movePeriod(i, dir) { const e = workingEntry(state.selectedId), j = dir === 'up' ? i - 1 : i + 1; if (!e.periods || j < 0 || j >= e.periods.length) return; const [p] = e.periods.splice(i, 1); e.periods.splice(j, 0, p); state.selectedPeriod = j; markEdited(state.selectedId); persist(); renderEntry(); }
-function addSource() { const e = workingEntry(state.selectedId); if (!Array.isArray(e.sources)) e.sources = []; e.sources.push({ citation: '', doi: null, url: '', tier: null, verified: false }); markEdited(state.selectedId); persist(); renderEntry(); }
-function removeSource(i) { const e = workingEntry(state.selectedId); if (!e.sources || !e.sources[i]) return; e.sources.splice(i, 1); markEdited(state.selectedId); persist(); renderEntry(); }
 
 /* ---------- import / export / study ---------- */
 function downloadStudy() {
@@ -481,16 +661,15 @@ function newStudy() {
    GUIDANCE: spotlight tour + non-modal hover tooltips
    ============================================================ */
 const TOUR = [
-  { target: null, title: 'Welcome', body: "Here's a quick tour of how to review the corpus. It takes about a minute, and you can skip anytime." },
-  { target: '.index', title: 'The corpus', body: 'Every diachronic is listed here. Search, filter by status or theme, and click one to open it.' },
-  { target: '.entry-title', title: 'The diachronic', body: 'Its name, category, and shift type sit up top. Click any of them to edit, and changes save on their own.' },
-  { target: '.tl-rail', title: 'Its timeline', body: 'How the meaning moved across eras. Click a dot to jump to that era.' },
-  { target: '.pf-meaning', title: 'What it meant', body: 'The heart of the review: the meaning in the selected era. Click the text to refine it.' },
-  { target: '#notes-sec', title: 'Your notes', body: 'Leave comments on a diachronic. Press Comment or Enter. You can edit or delete your own.' },
-  { target: '.db-inner', title: 'Your verdict', body: 'Approve (A), Reject (R), or Skip (S). Approving or rejecting jumps you to the next pending one.' },
-  { target: '.add-link', title: 'Add a diachronic', body: 'Missing something? Propose a new one: a quick free-text note or a full era-by-era breakdown.' },
-  { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help. And hover anything for a one-line hint.' },
-  { target: null, title: "You're set", body: 'That’s everything. Happy reviewing!' }
+  { target: null, title: 'Welcome', body: "Here's a one-minute tour of how the review works. You can skip anytime." },
+  { target: '.index', title: 'The corpus', body: 'Every diachronic is listed here. Search or filter, then click one to open it.' },
+  { target: '.entry-title', title: 'The diachronic', body: 'The phenomenon, its category, and how its meaning shifted. Everything here is read-only: you are here to judge it, not rewrite it.' },
+  { target: '.tl-rail', title: 'Era by era', body: 'Each dot is one era of this diachronic. Click a dot to read what the element meant then. You judge each era on its own.' },
+  { target: '.pf-meaning', title: 'What it meant', body: 'Read how the meaning is described for the selected era. If the year range looks off, nudge it with the arrows above it.' },
+  { target: '.pf-likert', title: 'Rate the description', body: 'Under each description, rate how correct it is, from incorrect (delete) to correct (approve). Keys 1 to 5 work too. Each rating moves you to the next era, until every era is rated.' },
+  { target: '#side', title: 'Sources, notes, shortcuts', body: 'Rate each source for relevance (irrelevant to very relevant), leave user notes for the team, and if a whole diachronic is clearly all-right or all-wrong, approve or reject every era at once from the buttons at the bottom.' },
+  { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help, and hover anything for a one-line hint.' },
+  { target: null, title: "You're set", body: 'That is everything. Happy reviewing.' }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
 function markOnboarded() { try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {} }
@@ -631,20 +810,36 @@ function bind() {
   els.themeFilter.addEventListener('change', e => { state.themeFilter = e.target.value || 'all'; persistLocal(); renderIndex(); });
   els.entryList.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) selectEntry(b.dataset.id); });
 
-  els.entry.addEventListener('input', e => { if (e.target.matches('[data-path]')) commitFieldDebounced(e.target); });
-  els.entry.addEventListener('change', e => { if (e.target.matches('select[data-path], input[data-path]')) commitField(e.target); });
-  els.entry.addEventListener('blur', e => { if (e.target.matches('[data-path]')) { commitField(e.target); renderIndex(); } }, true);
-  els.entry.addEventListener('keydown', e => {
+  // the year slider is the only editable field; live-sync its fill/readout while dragging
+  els.entry.addEventListener('input', e => {
+    if (!e.target.matches('input[data-path]')) return;
+    if (e.target.type === 'range') syncRange(e.target);
+    commitFieldDebounced(e.target);
+  });
+  // year typed into the text box (commit on Enter / blur)
+  els.entry.addEventListener('change', e => { const yi = e.target.closest('.yr-input'); if (yi) setYearFromText(yi); });
+  els.entry.addEventListener('keydown', e => { if (e.target.classList.contains('yr-input') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+  els.entry.addEventListener('click', e => {
+    const step = e.target.closest('[data-step]');
+    if (step) { stepYear(step.dataset.step, Number(step.dataset.dir)); return; }
+    const dot = e.target.closest('.likert-dot');
+    if (dot) { setRating(Number(dot.dataset.likert)); return; }
+    const node = e.target.closest('.tl-node');
+    if (node) selectPeriod(Number(node.dataset.period));
+  });
+
+  // sources + comments live in the side column
+  els.side.addEventListener('keydown', e => {
     if (e.target.id === 'comment-input' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment(); }
     else if (e.target.classList.contains('comment-edit-input') && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const c = e.target.closest('.comment'); if (c) saveComment(c.dataset.cid); }
   });
-  els.entry.addEventListener('click', e => {
-    const node = e.target.closest('.tl-node');
-    if (node) { selectPeriod(Number(node.dataset.period)); return; }
+  els.side.addEventListener('click', e => {
+    const tg = e.target.closest('.src-toggle');
+    if (tg) { const src = tg.closest('.source'); const open = src.classList.toggle('expanded'); tg.setAttribute('aria-expanded', String(open)); return; }
+    const sd = e.target.closest('.src-dot');
+    if (sd) { setSourceRating(Number(sd.dataset.srcIdx), Number(sd.dataset.srcLikert)); return; }
     const btn = e.target.closest('[data-action]'); if (btn) handleAction(btn.dataset.action, btn);
   });
-
-  els.decisionbar.addEventListener('click', e => { const b = e.target.closest('[data-action]'); if (!b) return; if (b.dataset.action === 'decision') setDecision(b.dataset.decision); if (b.dataset.action === 'next') goNextPending(); });
 
   els.menuBtn.addEventListener('click', () => { const open = els.menuPop.hidden; els.menuPop.hidden = !open; els.menuBtn.setAttribute('aria-expanded', String(open)); });
   document.addEventListener('click', e => { if (!els.menuPop.hidden && !e.target.closest('.menu')) els.menuPop.hidden = true; });
@@ -673,28 +868,25 @@ function bind() {
     if (e.key === 'Escape' && state.editingComment) { cancelEditComment(); return; }
     if (typing) return;
     const k = e.key.toLowerCase();
-    if (k === 'a') { e.preventDefault(); setDecision('approved'); }
-    else if (k === 'r') { e.preventDefault(); setDecision('rejected'); }
-    else if (k === 's') { e.preventDefault(); goNextPending(); }
-    else if (k === 'c') { e.preventDefault(); const t = $('comment-input'); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.focus(); } }
-    else if (k === 'enter') { e.preventDefault(); goNextPending(); }
+    if (/^[1-5]$/.test(e.key)) { e.preventDefault(); setRating(Number(e.key)); }
+    else if (k === 'c') { e.preventDefault(); const t = $('comment-input'); if (t) { t.focus(); } }
+    else if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); stepPeriod(1); }
+    else if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); stepPeriod(-1); }
     else if (e.key === 'ArrowDown' || k === 'j') { e.preventDefault(); stepEntry(1); }
     else if (e.key === 'ArrowUp' || k === 'k') { e.preventDefault(); stepEntry(-1); }
   });
 }
 const commitFieldDebounced = debounce(commitField, 300);
 function handleAction(action, el) {
-  const i = Number(el.dataset.index), cid = el.dataset.cid;
-  if (action === 'add-period') addPeriod();
-  else if (action === 'remove-period') removePeriod(i);
-  else if (action === 'move-period') movePeriod(i, el.dataset.dir);
-  else if (action === 'add-source') addSource();
-  else if (action === 'remove-source') removeSource(i);
-  else if (action === 'add-comment') addComment();
+  const cid = el.dataset.cid;
+  if (action === 'add-comment') addComment();
   else if (action === 'edit-comment') startEditComment(cid);
   else if (action === 'save-comment') saveComment(cid);
   else if (action === 'cancel-comment') cancelEditComment();
   else if (action === 'delete-comment') deleteComment(cid);
+  else if (action === 'approve-all') rateAll(5);
+  else if (action === 'reject-all') rateAll(1);
+  else if (action === 'skip-topic') skipTopic();
 }
 
 /* ---------- video login background ---------- */
@@ -734,7 +926,7 @@ function initEls() {
     studyFile: $('study-file'), pbarFill: $('pbar-fill'), progressLabel: $('progress-label'),
     saveDot: $('save-dot'), saveText: $('save-text'), menuBtn: $('menu-btn'), menuPop: $('menu-pop'), menuName: $('menu-name'), expertInitials: $('expert-initials'),
     search: $('search'), filters: $('filters'), themeFilter: $('theme-filter'), entryList: $('entry-list'),
-    stage: $('stage'), entry: $('entry'), decisionbar: $('decisionbar'), toast: $('toast')
+    stage: $('stage'), entry: $('entry'), side: $('side'), toast: $('toast')
   });
 }
 function checkFlash() {
