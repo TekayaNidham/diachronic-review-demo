@@ -335,7 +335,6 @@ function renderFocus(period, i) {
       <div class="year-steppers">
         <div class="year-box"><label>from</label><button type="button" class="step-btn" data-step="start" data-dir="-1" aria-label="earlier start">−</button><input type="number" inputmode="numeric" class="yr-input yr-from" data-year="start" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${a}" aria-label="start year"><button type="button" class="step-btn" data-step="start" data-dir="1" aria-label="later start">+</button></div>
         <div class="year-box"><label>to</label><button type="button" class="step-btn" data-step="end" data-dir="-1" aria-label="earlier end">−</button><input type="number" inputmode="numeric" class="yr-input yr-to" data-year="end" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${b}" aria-label="end year"><button type="button" class="step-btn" data-step="end" data-dir="1" aria-label="later end">+</button></div>
-        ${period.context ? `<div class="pf-ctx">${esc(period.context)}</div>` : ''}
       </div>
       <div class="timeline-slider range-dual" data-min="${YEAR_MIN}" data-max="${YEAR_MAX}">
         <div class="range-track"><div class="range-fill"></div></div>
@@ -508,7 +507,7 @@ function setRating(v) {
   updatePeriodNode(i); updateLikertUI();
   if (set) {
     replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
-    if (topicStatus(id) === 'done' && was !== 'done') { celebrateCompletion(); setTimeout(() => { toast('every era rated ✦ moving on'); goNextPending(); }, 1400); }
+    if (topicStatus(id) === 'done' && was !== 'done') { celebrateCompletion(); setTimeout(goNextPending, 1400); }
     else { const nxt = nextUndecided(id, i); if (nxt >= 0) setTimeout(() => selectPeriod(nxt), 300); }
   }
 }
@@ -542,12 +541,12 @@ function updateSourceUI(i) {
 }
 /* whole-diachronic shortcuts: rate every era at once, then move on (like the old approve/reject) */
 function rateAll(v) {
-  const id = state.selectedId, n = periodCount(id); if (!n) { toast('no eras to rate.'); return; }
+  const id = state.selectedId, n = periodCount(id); if (!n) return;
   const r = reviewFor(id);
   for (let i = 0; i < n; i++) r.period_decisions[i] = v;
   persist(); renderTop(); renderIndex(); renderEntry();
-  toast(v >= 4 ? 'all eras approved ✦ moving on' : 'all eras marked incorrect ✦ moving on');
-  setTimeout(goNextPending, 480);
+  celebrateCompletion();                 // same completion sweep + checkmark as rating the last era by hand
+  setTimeout(goNextPending, 1400);
 }
 function skipTopic() { goNextPending(); }
 function updatePeriodNode(i) {

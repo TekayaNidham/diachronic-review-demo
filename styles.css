@@ -251,7 +251,6 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .step-btn{ width:22px; height:22px; border-radius:6px; border:1px solid var(--surface-alt); background:var(--surface); color:var(--muted); font-size:1rem; line-height:1; display:grid; place-items:center; padding:0; transition:border-color .14s, color .14s, background .14s; }
 .step-btn:hover{ border-color:var(--accent); color:var(--accent); }
 .step-btn:active{ background:var(--accent-soft); }
-.pf-ctx{ margin-left:auto; font-size:.8rem; font-weight:300; color:var(--muted); line-height:1.4; max-width:34ch; text-align:right; }
 /* the timeline track with year ticks so you can follow the interval along real dates */
 .timeline-slider{ position:relative; height:50px; margin-top:.7rem; }
 /* track + ticks inset by the thumb radius (9px) so handles, fill and year labels line up */
