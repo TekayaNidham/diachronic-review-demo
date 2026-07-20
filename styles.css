@@ -409,6 +409,14 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .ac-title{ font-size:1.5rem; font-weight:400; }
 .ac-sub{ font-size:.92rem; font-weight:300; color:var(--muted); max-width:42ch; line-height:1.5; margin-bottom:1.1rem; }
 .ac-actions{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; }
+/* optional "why rejected" note on the rejection card */
+.reject-reason{ width:min(440px,90%); text-align:left; margin:.2rem 0 1.1rem; }
+.reject-reason label{ display:block; font-size:.66rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:.4rem; }
+.reject-reason label span{ text-transform:none; letter-spacing:0; font-weight:400; opacity:.7; }
+.reject-reason textarea{ width:100%; min-height:70px; border:1px solid var(--surface-alt); border-radius:var(--radius); background:#fff; padding:.7rem .8rem; font-family:inherit; font-size:.92rem; font-weight:300; line-height:1.55; resize:vertical; }
+.reject-reason textarea:focus{ outline:none; border-color:var(--reject); box-shadow:0 0 0 2px var(--reject-bg); }
+.ei-status.rejected{ background:var(--reject); }
+.ei-meta .rej{ color:var(--reject); font-weight:500; }
 
 /* comments thread */
 .comment-list{ display:flex; flex-direction:column; gap:.7rem; margin-bottom:1rem; }

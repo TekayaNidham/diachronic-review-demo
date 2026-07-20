@@ -100,8 +100,11 @@ function themeDoneCount(id) { const ta = themeAnswers(id); return THEME_QS.reduc
 function assessmentSteps(id) { const s = []; for (let i = 0; i < periodCount(id); i++) s.push({ kind: 'period', i }); return s; }
 function nextThemeQ(id) { return THEME_QS.find(q => themeAnswerVal(id, q.key) == null); }
 function assessmentTotal(id) { return THEME_QS.length + periodCount(id); }
-function assessmentDoneCount(id) { return themeDoneCount(id) + decidedCount(id); }
-function assessmentDone(id) { return themeDoneCount(id) === THEME_QS.length && decidedCount(id) === periodCount(id); }
+/* a "no" to any theme question rejects the whole diachronic — no need to grade its periods */
+function themeRejected(id) { const ta = themeAnswers(id); return ta.diachronic === 'no' || ta.important === 'no'; }
+function themeRejectLabel(id) { const ta = themeAnswers(id); return ta.diachronic === 'no' ? 'not genuinely diachronic' : ta.important === 'no' ? 'not important' : 'rejected'; }
+function assessmentDoneCount(id) { return themeRejected(id) ? assessmentTotal(id) : themeDoneCount(id) + decidedCount(id); }
+function assessmentDone(id) { return themeRejected(id) || (themeDoneCount(id) === THEME_QS.length && decidedCount(id) === periodCount(id)); }
 /* first period the expert hasn't rated yet (to resume mid-assessment); theme is handled by the banner */
 function firstUnansweredStep(id) {
   const n = periodCount(id);
@@ -306,14 +309,15 @@ function renderIndex(animate = false) {
     const e = displayEntry(entry.id), st = topicStatus(entry.id);
     const n = (e.periods || []).length;
     const sel = String(entry.id) === String(state.selectedId) ? ' selected' : '';
-    const progress = st === 'done' ? 'assessed'
+    const rejected = themeRejected(entry.id);
+    const progress = st === 'done' ? (rejected ? '<span class="rej">rejected</span>' : 'assessed')
       : st === 'started' ? `<span class="edited">${assessmentDoneCount(entry.id)}/${assessmentTotal(entry.id)} answered</span>`
       : `${n} period${n === 1 ? '' : 's'}`;
     const meta = [`#${esc(entry.id)}`, progress];
     if (hasComment(entry.id)) meta.push('noted');
     const tip = idx === 0 ? ' data-tip="Click any diachronic to review it. Use ↑ ↓ (or J / K) to move down the list."' : '';
     return `<button class="entry-item${sel}" data-id="${entry.id}" style="--r:${Math.min(idx, 14)}"${tip}>
-      <div class="ei-top"><span class="ei-name">${esc(e.visual_element || 'untitled')}</span><span class="ei-status ${st}"></span></div>
+      <div class="ei-top"><span class="ei-name">${esc(e.visual_element || 'untitled')}</span><span class="ei-status ${st}${rejected ? ' rejected' : ''}"></span></div>
       <div class="ei-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
     </button>`;
   }).join('');
@@ -332,7 +336,8 @@ function renderEntry() {
 /* shared theme header (title, category, shift, assessment status) */
 function topicHead(entry) {
   const id = entry.id, st = topicStatus(id);
-  const statusPill = st === 'done' ? '<span class="decided approved">assessed</span>'
+  const statusPill = st === 'done'
+    ? (themeRejected(id) ? '<span class="decided rejected">rejected</span>' : '<span class="decided approved">assessed</span>')
     : st === 'started' ? `<span class="decided started">${assessmentDoneCount(id)} / ${assessmentTotal(id)} assessed</span>` : '';
   const tags = [];
   if (entry.category) tags.push(`<span class="k-tag">${esc(entry.category)}</span>`);
@@ -452,14 +457,29 @@ function setActiveNode(idx) {
 }
 function renderReviewComplete(entry) {
   const id = entry.id, n = periodCount(id);
+  const X = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>';
+  const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
+  if (themeRejected(id)) {
+    const reason = esc((state.reviews[String(id)] || {}).reject_reason || '');
+    return `<div class="assess-complete">
+      <div class="ac-mark reject">${X}</div>
+      <div class="ac-title">theme rejected</div>
+      <div class="ac-sub">you marked this diachronic as <b>${esc(themeRejectLabel(id))}</b>, so the whole theme is flagged for removal.</div>
+      <div class="reject-reason">
+        <label for="reject-reason">why? <span>(optional)</span></label>
+        <textarea id="reject-reason" placeholder="a short note on why this theme doesn't belong…">${reason}</textarea>
+      </div>
+      <div class="ac-actions">
+        <button type="button" class="rv-btn" data-review="revisit">change my answer</button>
+        <button type="button" class="rv-btn primary" data-action="next-theme">choose the next theme ▸</button>
+      </div>
+    </div>`;
+  }
   const vals = Object.values(periodDecisions(id)).map(Number).filter(x => !isNaN(x));
   const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 5;
   const reject = mean < 3;
-  const icon = reject
-    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>'
-    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
   return `<div class="assess-complete">
-    <div class="ac-mark${reject ? ' reject' : ''}">${icon}</div>
+    <div class="ac-mark${reject ? ' reject' : ''}">${reject ? X : CHECK}</div>
     <div class="ac-title">assessment complete</div>
     <div class="ac-sub">you judged the theme and all ${n} period${n === 1 ? '' : 's'}. your answers are saved.</div>
     <div class="ac-actions">
@@ -685,6 +705,17 @@ function reviewNext() {
 }
 function reviewBack() { if (state.reviewStep > 0) reviewGoStep(state.reviewStep - 1); }
 function finishAssessment() { state.reviewComplete = true; renderEntry(); celebrateCompletion(); }
+/* "change my answer" from the complete/rejected card: if it was rejected, clear the "no" so the
+   theme banner re-asks; then drop back into the flow */
+function reviewRevisit() {
+  const id = state.selectedId;
+  if (themeRejected(id)) {
+    const r = reviewFor(id);
+    THEME_QS.forEach(q => { if (r.theme_answers[q.key] === 'no') delete r.theme_answers[q.key]; });
+    persist(); renderTop(); renderIndex();
+  }
+  reviewGoStep(0);
+}
 
 /* ---------- ratings & nav ---------- */
 /* theme-level yes/no from the top banner; answering swaps the banner to the next question,
@@ -694,6 +725,7 @@ function setThemeAnswer(key, val) {
   if (r.theme_answers[key] === val) return;
   r.theme_answers[key] = val;
   persist(); renderTop(); renderIndex(); refreshProgress();
+  if (val === 'no') { setTimeout(finishAssessment, 320); return; }   // rejects the whole diachronic
   if (assessmentDone(id)) { setTimeout(finishAssessment, 420); return; }
   updateThemeBanner();
 }
@@ -722,7 +754,7 @@ function celebrateCompletion() {
   // the mark reflects the verdict: green check when mostly correct, red ✕ when mostly rejected
   const vals = Object.values(periodDecisions(state.selectedId)).map(Number).filter(n => !isNaN(n));
   const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 5;
-  const reject = mean < 3;
+  const reject = themeRejected(state.selectedId) || mean < 3;
   const rail = els.entry.querySelector('.tl-rail');
   if (rail) { rail.classList.remove('celebrate'); void rail.offsetWidth; rail.classList.add('celebrate'); setTimeout(() => rail.classList.remove('celebrate'), 1900); }
   const burst = document.createElement('div');
@@ -1064,6 +1096,7 @@ function bind() {
 
   // the year slider is the only editable field; live-sync its fill/readout + value bubble while dragging
   els.entry.addEventListener('input', e => {
+    if (e.target.id === 'reject-reason') { commitRejectReason(e.target.value); return; }
     if (!e.target.matches('input[data-path]')) return;
     if (e.target.type === 'range') { syncRange(e.target); showBubble(e.target); }
     commitFieldDebounced(e.target);
@@ -1085,7 +1118,7 @@ function bind() {
     const dot = e.target.closest('.likert-dot');
     if (dot) { setRating(Number(dot.dataset.likert)); return; }
     const rv = e.target.closest('[data-review]');
-    if (rv) { const a = rv.dataset.review; if (a === 'next') reviewNext(); else if (a === 'back') reviewBack(); else if (a === 'revisit') reviewGoStep(0); return; }
+    if (rv) { const a = rv.dataset.review; if (a === 'next') reviewNext(); else if (a === 'back') reviewBack(); else if (a === 'revisit') reviewRevisit(); return; }
     const act = e.target.closest('[data-action]');
     if (act) { handleAction(act.dataset.action, act); return; }
     const node = e.target.closest('.tl-node');
@@ -1150,6 +1183,7 @@ function bind() {
   });
 }
 const commitFieldDebounced = debounce(commitField, 300);
+const commitRejectReason = debounce(text => { reviewFor(state.selectedId).reject_reason = text; persist(); }, 400);
 function handleAction(action, el) {
   const cid = el.dataset.cid;
   if (action === 'add-comment') addComment();
