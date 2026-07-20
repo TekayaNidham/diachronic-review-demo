@@ -373,21 +373,23 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .ap-bar span{ display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .35s var(--ease); }
 .ap-count{ margin-top:.4rem; font-size:.64rem; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:500; }
 
-/* theme yes/no step */
-.assess-card.theme-step{ flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:.45rem; padding:1rem; }
-.assess-kicker{ font-size:.6rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; }
-.assess-q{ font-size:1.65rem; font-weight:400; line-height:1.25; max-width:22ch; }
-.assess-hint{ font-size:.9rem; font-weight:300; color:var(--muted); max-width:40ch; line-height:1.5; margin-bottom:1.1rem; }
-.yesno{ display:flex; gap:1rem; }
-.yn-btn{ min-width:132px; border:1.5px solid var(--surface-alt); background:var(--surface); border-radius:12px; padding:.9rem 1.4rem; font-family:inherit; font-size:1.05rem; font-weight:600; color:var(--text); transition:transform .16s var(--ease), border-color .16s, background .16s, color .16s, box-shadow .16s; }
+/* theme yes/no BANNER (sits on top of the periods, until answered) */
+.theme-banner-wrap{ flex:0 0 auto; }
+.theme-banner{ display:flex; align-items:center; justify-content:space-between; gap:1.2rem; background:var(--accent-soft); border:1px solid rgba(200,90,58,.32); border-radius:12px; padding:.8rem 1.1rem; margin-bottom:1rem; }
+.theme-banner.tb-leave{ animation:tbLeave .32s var(--ease) forwards; }
+@keyframes tbLeave{ to{ opacity:0; transform:translateY(-8px); } }
+.tb-text{ display:flex; flex-direction:column; gap:.12rem; min-width:0; }
+.tb-kicker{ font-size:.56rem; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+.tb-q{ font-size:1.02rem; font-weight:500; line-height:1.25; }
+.tb-hint{ font-size:.78rem; font-weight:300; color:var(--muted); line-height:1.4; }
+.tb-yesno{ display:flex; gap:.5rem; flex:0 0 auto; }
+.yn-btn{ border:1.5px solid var(--surface-alt); background:var(--surface); border-radius:12px; font-family:inherit; font-weight:600; color:var(--text); transition:transform .16s var(--ease), border-color .16s, background .16s, color .16s, box-shadow .16s; }
+.yn-btn.sm{ min-width:66px; padding:.5rem 1rem; font-size:.95rem; border-radius:10px; }
 .yn-btn:hover{ transform:translateY(-2px); }
 .yn-btn.yes:hover, .yn-btn.yes.on{ border-color:var(--approve); background:var(--approve-bg); color:var(--approve); }
 .yn-btn.no:hover, .yn-btn.no.on{ border-color:var(--reject); background:var(--reject-bg); color:var(--reject); }
-.yn-btn.on{ box-shadow:0 4px 14px -6px rgba(26,26,24,.3); }
-.yn-btn.on::after{ content:'✓'; margin-left:.45rem; font-size:.9em; }
-/* the "answered ✓ moving on" line makes it apparent the question resolves and disappears */
-.assess-answered{ margin-top:1rem; font-size:.78rem; font-weight:500; color:var(--approve); opacity:0; transform:translateY(4px); transition:opacity .2s var(--ease), transform .2s var(--ease); }
-.theme-step:not([data-answer="pending"]) .assess-answered{ opacity:1; transform:none; }
+.nudge{ animation:nudge .42s var(--ease); }
+@keyframes nudge{ 0%,100%{transform:translateX(0)} 18%{transform:translateX(-5px)} 38%{transform:translateX(5px)} 58%{transform:translateX(-3px)} 78%{transform:translateX(3px)} }
 
 /* review nav */
 .review-nav{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--surface-alt); }

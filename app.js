@@ -95,24 +95,18 @@ const THEME_QS = [
 function themeAnswers(id) { const r = state.reviews[String(id)]; return (r && r.theme_answers) || {}; }
 function themeAnswerVal(id, key) { const v = themeAnswers(id)[key]; return v === 'yes' || v === 'no' ? v : null; }
 function themeDoneCount(id) { const ta = themeAnswers(id); return THEME_QS.reduce((c, q) => c + (ta[q.key] === 'yes' || ta[q.key] === 'no' ? 1 : 0), 0); }
-/* the ordered guide: two theme questions, then one step per period */
-function assessmentSteps(id) {
-  const steps = THEME_QS.map(q => ({ kind: 'theme', key: q.key }));
-  for (let i = 0; i < periodCount(id); i++) steps.push({ kind: 'period', i });
-  return steps;
-}
+/* the guided steps are the PERIODS; the two theme yes/no live in a persistent banner on top
+   (so the expert sees the period descriptions immediately, not a theme gate first) */
+function assessmentSteps(id) { const s = []; for (let i = 0; i < periodCount(id); i++) s.push({ kind: 'period', i }); return s; }
+function nextThemeQ(id) { return THEME_QS.find(q => themeAnswerVal(id, q.key) == null); }
 function assessmentTotal(id) { return THEME_QS.length + periodCount(id); }
 function assessmentDoneCount(id) { return themeDoneCount(id) + decidedCount(id); }
 function assessmentDone(id) { return themeDoneCount(id) === THEME_QS.length && decidedCount(id) === periodCount(id); }
-/* first step the expert hasn't answered yet (to resume mid-assessment) */
+/* first period the expert hasn't rated yet (to resume mid-assessment); theme is handled by the banner */
 function firstUnansweredStep(id) {
-  const steps = assessmentSteps(id);
-  for (let s = 0; s < steps.length; s++) {
-    const st = steps[s];
-    if (st.kind === 'theme' && themeAnswerVal(id, st.key) == null) return s;
-    if (st.kind === 'period' && periodRating(id, st.i) == null) return s;
-  }
-  return Math.max(0, steps.length - 1);
+  const n = periodCount(id);
+  for (let i = 0; i < n; i++) if (periodRating(id, i) == null) return i;
+  return Math.max(0, n - 1);
 }
 /* topic lifecycle: 'pending' (untouched) · 'started' (some answered) · 'done' (theme + every era answered) */
 function topicStatus(id) {
@@ -382,31 +376,55 @@ function renderReview(entry) {
   const steps = assessmentSteps(id);
   if (state.reviewStep >= steps.length) state.reviewStep = Math.max(0, steps.length - 1);
   if (state.reviewComplete && assessmentDone(id)) { els.entry.innerHTML = topicHead(entry) + renderReviewComplete(entry); return; }
-  const step = steps[state.reviewStep] || steps[0];
-  const activePeriod = step && step.kind === 'period' ? step.i : -1;
+  const step = steps[state.reviewStep];
+  const activePeriod = step ? step.i : -1;
   if (activePeriod >= 0) state.selectedPeriod = activePeriod;
   const done = assessmentDoneCount(id), total = assessmentTotal(id), pct = total ? Math.round((done / total) * 100) : 0;
   els.entry.innerHTML = `
     ${topicHead(entry)}
     <div class="tl-rail" data-tip="Each dot is a period. Its colour shows your rating once you judge it.">${periods.map((p, i) => renderNode(p, i, activePeriod)).join('')}</div>
+    <div class="theme-banner-wrap">${renderThemeBanner(id)}</div>
     <div class="assess-flow">
       <div class="assess-progress"><div class="ap-bar"><span style="width:${pct}%"></span></div><div class="ap-count">${progressText(id, steps)}</div></div>
       <div class="assess-body">${stepBodyHTML(id, step)}</div>
       <div class="review-nav">
         <button type="button" class="rv-btn back" data-review="back"${state.reviewStep === 0 ? ' disabled' : ''}>← back</button>
-        <button type="button" class="rv-btn next" data-review="next">${state.reviewStep === steps.length - 1 ? 'finish ✓' : 'next →'}</button>
+        <button type="button" class="rv-btn next" data-review="next">${state.reviewStep >= steps.length - 1 ? 'finish ✓' : 'next →'}</button>
       </div>
     </div>`;
 }
 function progressText(id, steps) {
-  return `step ${state.reviewStep + 1} of ${steps.length} · ${assessmentDoneCount(id)}/${assessmentTotal(id)} answered`;
+  const n = steps.length, label = n ? `period ${state.reviewStep + 1} of ${n}` : 'theme only';
+  return `${label} · ${assessmentDoneCount(id)}/${assessmentTotal(id)} answered`;
 }
 function stepBodyHTML(id, step) {
-  if (!step) return '<div class="empty">nothing to assess.</div>';
-  if (step.kind === 'theme') return renderThemeStep(id, step);
+  if (!step) return '<div class="empty">no periods to assess — answer the theme questions above.</div>';
   const periods = displayEntry(id).periods || [];
   return renderFocus(periods[step.i], step.i);
 }
+/* theme yes/no banner: shows the first unanswered theme question on top, until answered */
+function renderThemeBanner(id) {
+  const q = nextThemeQ(id); if (!q) return '';
+  return `<div class="theme-banner" data-key="${q.key}">
+    <div class="tb-text">
+      <span class="tb-kicker">about the theme · answer to remove</span>
+      <span class="tb-q">${esc(q.q)}</span>
+      <span class="tb-hint">${esc(q.hint)}</span>
+    </div>
+    <div class="tb-yesno">
+      <button type="button" class="yn-btn sm no" data-theme-ans="no" data-theme-key="${q.key}">no</button>
+      <button type="button" class="yn-btn sm yes" data-theme-ans="yes" data-theme-key="${q.key}">yes</button>
+    </div>
+  </div>`;
+}
+function updateThemeBanner() {
+  const wrap = els.entry.querySelector('.theme-banner-wrap'); if (!wrap) return;
+  const html = renderThemeBanner(state.selectedId), existing = wrap.querySelector('.theme-banner');
+  if (!html) { if (existing && !prefersReducedMotion()) { existing.classList.add('tb-leave'); setTimeout(() => { wrap.innerHTML = ''; }, 320); } else wrap.innerHTML = ''; return; }
+  wrap.innerHTML = html;
+  replayAnim(wrap.querySelector('.theme-banner'), 'step-in');
+}
+function nudgeThemeBanner() { replayAnim(els.entry.querySelector('.theme-banner'), 'nudge'); }
 /* commit any year edits still sitting in the slider/inputs so a step change never drops them */
 function flushYearEdits() { els.entry.querySelectorAll('.range-dual input[data-path]').forEach(commitField); }
 /* keep the shell, swap only the step body + progress + nav + active dot */
@@ -431,20 +449,6 @@ function setActiveNode(idx) {
   const nodes = els.entry.querySelectorAll('.tl-node');
   nodes.forEach((n, i) => n.classList.toggle('active', i === idx));
   if (idx >= 0 && nodes[idx] && !prefersReducedMotion()) nodes[idx].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-}
-function renderThemeStep(id, step) {
-  const qi = THEME_QS.findIndex(q => q.key === step.key), meta = THEME_QS[qi] || {};
-  const val = themeAnswerVal(id, step.key);
-  return `<div class="assess-card theme-step" data-answer="${val || 'pending'}">
-    <div class="assess-kicker">about the theme · question ${qi + 1} of ${THEME_QS.length}</div>
-    <div class="assess-q">${esc(meta.q || '')}</div>
-    <div class="assess-hint">${esc(meta.hint || '')}</div>
-    <div class="yesno">
-      <button type="button" class="yn-btn no${val === 'no' ? ' on' : ''}" data-theme-ans="no" data-theme-key="${step.key}">no</button>
-      <button type="button" class="yn-btn yes${val === 'yes' ? ' on' : ''}" data-theme-ans="yes" data-theme-key="${step.key}">yes</button>
-    </div>
-    <div class="assess-answered">answered ✓ moving to the ${qi < THEME_QS.length - 1 ? 'next question' : 'periods'}…</div>
-  </div>`;
 }
 function renderReviewComplete(entry) {
   const id = entry.id, n = periodCount(id);
@@ -676,24 +680,22 @@ function reviewGoStep(idx) {
 }
 function reviewNext() {
   const steps = assessmentSteps(state.selectedId);
-  if (state.reviewStep >= steps.length - 1) { if (assessmentDone(state.selectedId)) finishAssessment(); return; }
+  if (state.reviewStep >= steps.length - 1) { if (assessmentDone(state.selectedId)) finishAssessment(); else nudgeThemeBanner(); return; }
   reviewGoStep(state.reviewStep + 1);
 }
 function reviewBack() { if (state.reviewStep > 0) reviewGoStep(state.reviewStep - 1); }
 function finishAssessment() { state.reviewComplete = true; renderEntry(); celebrateCompletion(); }
 
 /* ---------- ratings & nav ---------- */
-/* theme-level yes/no; the choice resolves in place, then the guide advances */
+/* theme-level yes/no from the top banner; answering swaps the banner to the next question,
+   or clears it once both are answered — the period steps are unaffected */
 function setThemeAnswer(key, val) {
   const id = state.selectedId, r = reviewFor(id);
-  const set = r.theme_answers[key] !== val;
-  if (set) r.theme_answers[key] = val; else delete r.theme_answers[key];
-  persist(); renderTop(); renderIndex();
-  // targeted: light up the chosen button + show the "answered" line so it's clear it's resolved
-  els.entry.querySelectorAll(`.yn-btn[data-theme-key="${key}"]`).forEach(b => b.classList.toggle('on', set && b.dataset.themeAns === val));
-  const card = els.entry.querySelector('.theme-step'); if (card) card.dataset.answer = set ? val : 'pending';
-  refreshProgress();
-  if (set) { if (assessmentDone(id)) setTimeout(finishAssessment, 500); else setTimeout(reviewNext, 460); }
+  if (r.theme_answers[key] === val) return;
+  r.theme_answers[key] = val;
+  persist(); renderTop(); renderIndex(); refreshProgress();
+  if (assessmentDone(id)) { setTimeout(finishAssessment, 420); return; }
+  updateThemeBanner();
 }
 /* each period gets a Likert rating (1..5) for how correct its description is, then the guide advances */
 function setRating(v) {
@@ -707,8 +709,10 @@ function setRating(v) {
   updatePeriodNode(i); updateLikertUI(); refreshProgress();
   if (!set) return;
   replayAnim(els.entry.querySelector(`.likert-dot[data-likert="${v}"]`), 'ripple');
+  const steps = assessmentSteps(id);
   if (assessmentDone(id)) setTimeout(finishAssessment, 500);
-  else setTimeout(reviewNext, 460);
+  else if (state.reviewStep < steps.length - 1) setTimeout(reviewNext, 460);
+  else setTimeout(nudgeThemeBanner, 480);   // last period rated but a theme question is still open
 }
 /* a diachronic just got fully rated: sweep the timeline dots and pop a checkmark before moving on */
 function celebrateCompletion() {
@@ -917,7 +921,7 @@ const TOUR = [
   { target: '.mode-switch', title: 'Two modes', body: 'Switch between Explore (read-only browsing) and Review (the guided assessment) here at any time.' },
   { target: '#side', title: 'Sources and notes', body: 'The sources sit here for reference (you rate them for relevance while reviewing), and you can leave user notes for the team.' },
   { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help, and hover anything for a one-line hint.' },
-  { target: null, title: "You're set", body: "In Review you'll answer two yes/no questions about the theme, then rate each period's description and confirm its years. Happy reviewing." }
+  { target: null, title: "You're set", body: "In Review you go period by period: rate each description and confirm its years. A small banner on top asks two yes/no questions about the theme, which you can answer whenever. Happy reviewing." }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
 function markOnboarded() { try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {} }
@@ -1130,8 +1134,8 @@ function bind() {
     if (typing) return;
     const k = e.key.toLowerCase();
     if (state.mode === 'review') {
-      const step = assessmentSteps(state.selectedId)[state.reviewStep];
-      if (step && step.kind === 'theme' && (k === 'y' || k === 'n')) { e.preventDefault(); setThemeAnswer(step.key, k === 'y' ? 'yes' : 'no'); return; }
+      const q = nextThemeQ(state.selectedId);
+      if (q && (k === 'y' || k === 'n')) { e.preventDefault(); setThemeAnswer(q.key, k === 'y' ? 'yes' : 'no'); return; }
       if (/^[1-5]$/.test(e.key)) { e.preventDefault(); setRating(Number(e.key)); return; }
       if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); reviewNext(); return; }
       if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); reviewBack(); return; }
