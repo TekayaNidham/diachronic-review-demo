@@ -516,11 +516,17 @@ function celebrateCompletion() {
   if (prefersReducedMotion()) return;
   // the dots wave with a per-dot stagger, so hold the class for the full sweep
   // (replayAnim would strip it on the first dot's animationend and cut the rest short)
+  // the mark reflects the verdict: green check when mostly correct, red ✕ when mostly rejected
+  const vals = Object.values(periodDecisions(state.selectedId)).map(Number).filter(n => !isNaN(n));
+  const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 5;
+  const reject = mean < 3;
   const rail = els.entry.querySelector('.tl-rail');
   if (rail) { rail.classList.remove('celebrate'); void rail.offsetWidth; rail.classList.add('celebrate'); setTimeout(() => rail.classList.remove('celebrate'), 1900); }
   const burst = document.createElement('div');
-  burst.className = 'complete-burst';
-  burst.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
+  burst.className = 'complete-burst' + (reject ? ' reject' : '');
+  burst.innerHTML = reject
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg>';
   document.body.appendChild(burst);
   setTimeout(() => burst.remove(), 1650);
 }

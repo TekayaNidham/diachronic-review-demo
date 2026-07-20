@@ -475,9 +475,11 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .tl-rail.celebrate .tl-dot{ animation:dotWave .8s var(--ease); animation-delay:calc(var(--i)*100ms); }
 @keyframes dotWave{ 0%{ transform:scale(1);} 35%{ transform:scale(1.45);} 100%{ transform:scale(1);} }
 .complete-burst{ position:fixed; left:50%; top:44%; z-index:80; pointer-events:none; color:var(--approve); animation:burstFade 1.6s var(--ease) forwards; }
+.complete-burst.reject{ color:var(--reject); }
 .complete-burst svg{ width:104px; height:104px; fill:none; }
-.complete-burst circle{ stroke:var(--approve); stroke-width:1.5; opacity:.35; }
-.complete-burst path{ stroke:var(--approve); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .75s var(--ease) .2s forwards; }
+.complete-burst circle{ stroke:currentColor; stroke-width:1.5; opacity:.35; }
+.complete-burst path{ stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:34; stroke-dashoffset:34; animation:checkDraw .75s var(--ease) .2s forwards; }
+.complete-burst.reject path{ stroke-dasharray:24; stroke-dashoffset:24; }
 @keyframes burstFade{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.6);} 18%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 75%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{ opacity:0; transform:translate(-50%,-50%) scale(1.08);} }
 @keyframes checkDraw{ to{ stroke-dashoffset:0; } }
 
