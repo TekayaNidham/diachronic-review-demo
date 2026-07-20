@@ -29,7 +29,8 @@ const state = {
   studyId: null, expert: null, corpusMeta: {}, entries: [], originals: new Map(),
   reviews: {}, suggestions: [], selectedId: null, selectedPeriod: 0, editingComment: null,
   filter: 'all', themeFilter: 'all', search: '',
-  mode: 'explore', reviewStep: 0, reviewComplete: false, reviewEditTheme: false   // explore (read-only) vs review (guided assessment)
+  mode: 'explore', reviewStep: 0, reviewComplete: false, reviewEditTheme: false,   // explore (read-only) vs review (guided assessment)
+  selection: []   // ids the reviewer picked in explore to review as a batch
 };
 const els = {};
 const saver = { timer: null, inFlight: false, again: false, serverOk: null };
@@ -89,8 +90,8 @@ function decidedCount(id) { const pd = periodDecisions(id), n = periodCount(id);
 
 /* ---------- theme-level assessment (yes/no on the theme itself) ---------- */
 const THEME_QS = [
-  { key: 'diachronic', q: 'Is this theme genuinely diachronic?', hint: 'Its meaning actually shifts across historical time, rather than staying constant.' },
-  { key: 'important', q: 'Is this theme important?', hint: 'Worth documenting as a meaningful cultural shift.' }
+  { key: 'diachronic', q: 'Is this topic genuinely diachronic?', hint: 'Its meaning actually shifts across historical time, rather than staying constant.' },
+  { key: 'important', q: 'Is this topic important?', hint: 'Worth documenting as a meaningful cultural shift.' }
 ];
 function themeAnswers(id) { const r = state.reviews[String(id)]; return (r && r.theme_answers) || {}; }
 function themeAnswerVal(id, key) { const v = themeAnswers(id)[key]; return v === 'yes' || v === 'no' ? v : null; }
@@ -155,7 +156,7 @@ function snapshot() {
     schema_version: 'diachronic_expert_study_v2', app_version: APP_VERSION, study_id: state.studyId, saved_at: nowIso(),
     expert: state.expert, corpus: { name: DEFAULT_CORPUS, title: state.corpusMeta.title || null, entry_count: state.entries.length },
     counts: counts(), reviews: state.reviews, suggestions: state.suggestions,
-    ui: { selectedId: state.selectedId, filter: state.filter, themeFilter: state.themeFilter, search: state.search, mode: state.mode }
+    ui: { selectedId: state.selectedId, filter: state.filter, themeFilter: state.themeFilter, search: state.search, mode: state.mode, selection: state.selection }
   };
 }
 function persistLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot())); return true; } catch (e) { console.warn('local save failed', e); return false; } }
@@ -251,6 +252,23 @@ function applyStudy(data) {
   state.selectedId = ui.selectedId != null ? ui.selectedId : state.selectedId;
   state.filter = ui.filter || 'all'; state.themeFilter = ui.themeFilter || 'all'; state.search = ui.search || '';
   state.mode = ui.mode === 'review' ? 'review' : 'explore';
+  state.selection = Array.isArray(ui.selection) ? ui.selection.map(String) : [];
+}
+/* ---------- review selection (topics the reviewer picked in explore) ---------- */
+function isSelected(id) { return state.selection.includes(String(id)); }
+function selectionCount() { return state.selection.length; }
+function orderedSelection() { const set = new Set(state.selection.map(String)); return state.entries.map(e => String(e.id)).filter(id => set.has(id)); }
+function toggleSelect(id) {
+  id = String(id);
+  const i = state.selection.indexOf(id);
+  if (i >= 0) state.selection.splice(i, 1); else state.selection.push(id);
+  persistLocal();
+  const on = isSelected(id);
+  const chk = els.entryList && els.entryList.querySelector(`.ei-check[data-select="${id}"]`);
+  if (chk) chk.classList.toggle('on', on);
+  const item = els.entryList && els.entryList.querySelector(`.entry-item[data-id="${id}"]`);
+  if (item) item.classList.toggle('picked', on);
+  if (state.mode === 'explore') updateExploreCta();
 }
 
 /* ---------- stats / filter ---------- */
@@ -296,7 +314,7 @@ function renderIndex(animate = false) {
   document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.filter === state.filter));
   const themes = themeOptions();
   if (state.themeFilter !== 'all' && !themes.includes(state.themeFilter)) state.themeFilter = 'all';
-  els.themeFilter.innerHTML = `<option value="all">all themes (${state.entries.length})</option>` +
+  els.themeFilter.innerHTML = `<option value="all">all categories (${state.entries.length})</option>` +
     themes.map(t => `<option value="${esc(t)}">${esc(t)} (${state.entries.filter(e => themeForEntry(e) === t).length})</option>`).join('');
   els.themeFilter.value = state.themeFilter;
   const list = filtered();
@@ -316,7 +334,8 @@ function renderIndex(animate = false) {
     const meta = [`#${esc(entry.id)}`, progress];
     if (hasComment(entry.id)) meta.push('noted');
     const tip = idx === 0 ? ' data-tip="Click any diachronic to review it. Use ↑ ↓ (or J / K) to move down the list."' : '';
-    return `<button class="entry-item${sel}" data-id="${entry.id}" style="--r:${Math.min(idx, 14)}"${tip}>
+    return `<button class="entry-item${sel}${isSelected(entry.id) ? ' picked' : ''}" data-id="${entry.id}" style="--r:${Math.min(idx, 14)}"${tip}>
+      <span class="ei-check${isSelected(entry.id) ? ' on' : ''}" data-select="${entry.id}" title="add to your review list" aria-label="select for review"></span>
       <div class="ei-top"><span class="ei-name">${esc(e.visual_element || 'untitled')}</span><span class="ei-status ${st}${rejected ? ' rejected' : ''}"></span></div>
       <div class="ei-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
     </button>`;
@@ -353,12 +372,23 @@ function renderExplore(entry) {
   const periods = entry.periods || [];
   els.entry.innerHTML = `
     ${topicHead(entry)}
-    <div class="tl-rail" data-tip="Each dot is a period of this theme. Click a dot to read what the element meant then.">${periods.map((p, i) => renderNode(p, i)).join('')}</div>
-    ${periods.length ? renderExploreFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no periods recorded for this theme.</div>'}
+    <div class="tl-rail" data-tip="Each dot is a period of this topic. Click a dot to read what the element meant then.">${periods.map((p, i) => renderNode(p, i)).join('')}</div>
+    ${periods.length ? renderExploreFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no periods recorded for this topic.</div>'}
     <div class="explore-cta">
-      <div class="explore-cta-note">explore the theme and its periods freely. when you're ready, assess them one by one.</div>
-      <button type="button" class="start-assess-btn" data-action="start-assessment">start assessment <span aria-hidden="true">▸</span></button>
+      <button type="button" class="select-btn${isSelected(entry.id) ? ' on' : ''}" data-action="toggle-select-current">
+        <span class="sel-box" aria-hidden="true"></span><span class="sel-label">${isSelected(entry.id) ? 'in your review list' : 'add to review list'}</span>
+      </button>
+      <div class="explore-cta-note">pick the topics you're confident reviewing, then review your list.</div>
+      <button type="button" class="start-assess-btn review-list-btn" data-action="review-selection"${selectionCount() ? '' : ' disabled'}>review my list (<span class="rl-count">${selectionCount()}</span>) <span aria-hidden="true">▸</span></button>
     </div>`;
+}
+/* keep the explore CTA in sync as topics are picked/unpicked (no full re-render) */
+function updateExploreCta() {
+  const n = selectionCount();
+  const rv = els.entry.querySelector('.review-list-btn');
+  if (rv) { rv.disabled = n === 0; const c = rv.querySelector('.rl-count'); if (c) c.textContent = n; }
+  const sb = els.entry.querySelector('.select-btn');
+  if (sb) { const on = isSelected(state.selectedId); sb.classList.toggle('on', on); const l = sb.querySelector('.sel-label'); if (l) l.textContent = on ? 'in your review list' : 'add to review list'; }
 }
 function renderExploreFocus(period, i) {
   return `<div class="period-focus explore">
@@ -399,11 +429,11 @@ function renderReview(entry) {
     </div>`;
 }
 function progressText(id, steps) {
-  const n = steps.length, label = n ? `period ${state.reviewStep + 1} of ${n}` : 'theme only';
+  const n = steps.length, label = n ? `period ${state.reviewStep + 1} of ${n}` : 'topic only';
   return `${label} · ${assessmentDoneCount(id)}/${assessmentTotal(id)} answered`;
 }
 function stepBodyHTML(id, step) {
-  if (!step) return '<div class="empty">no periods to assess — answer the theme questions above.</div>';
+  if (!step) return '<div class="empty">no periods to assess — answer the topic questions above.</div>';
   const periods = displayEntry(id).periods || [];
   return renderFocus(periods[step.i], step.i);
 }
@@ -412,7 +442,7 @@ function stepBodyHTML(id, step) {
 function renderThemeBanner(id) {
   if (state.reviewEditTheme) {
     return `<div class="theme-banner editing">
-      <span class="tb-kicker">about the theme · change any answer</span>
+      <span class="tb-kicker">about the topic · change any answer</span>
       <div class="tb-rows">${THEME_QS.map(q => {
       const v = themeAnswerVal(id, q.key);
       return `<div class="tb-row"><span class="tb-rq">${esc(q.q)}</span>
@@ -426,7 +456,7 @@ function renderThemeBanner(id) {
   const q = nextThemeQ(id); if (!q) return '';
   return `<div class="theme-banner" data-key="${q.key}">
     <div class="tb-text">
-      <span class="tb-kicker">about the theme · answer to remove</span>
+      <span class="tb-kicker">about the topic · answer to remove</span>
       <span class="tb-q">${esc(q.q)}</span>
       <span class="tb-hint">${esc(q.hint)}</span>
     </div>
@@ -478,14 +508,14 @@ function renderReviewComplete(entry) {
     return `<div class="assess-complete">
       <div class="ac-mark reject">${X}</div>
       <div class="ac-title">theme rejected</div>
-      <div class="ac-sub">you marked this diachronic as <b>${esc(themeRejectLabel(id))}</b>, so the whole theme is flagged for removal.</div>
+      <div class="ac-sub">you marked this topic as <b>${esc(themeRejectLabel(id))}</b>, so the whole topic is flagged for removal.</div>
       <div class="reject-reason">
         <label for="reject-reason">why? <span>(optional)</span></label>
-        <textarea id="reject-reason" placeholder="a short note on why this theme doesn't belong…">${reason}</textarea>
+        <textarea id="reject-reason" placeholder="a short note on why this topic doesn't belong…">${reason}</textarea>
       </div>
       <div class="ac-actions">
         <button type="button" class="rv-btn" data-review="revisit">change my answer</button>
-        <button type="button" class="rv-btn primary" data-action="next-theme">choose the next theme ▸</button>
+        <button type="button" class="rv-btn primary" data-action="next-topic">choose the next topic ▸</button>
       </div>
     </div>`;
   }
@@ -495,10 +525,10 @@ function renderReviewComplete(entry) {
   return `<div class="assess-complete">
     <div class="ac-mark${reject ? ' reject' : ''}">${reject ? X : CHECK}</div>
     <div class="ac-title">assessment complete</div>
-    <div class="ac-sub">you judged the theme and all ${n} period${n === 1 ? '' : 's'}. your answers are saved.</div>
+    <div class="ac-sub">you judged the topic and all ${n} period${n === 1 ? '' : 's'}. your answers are saved.</div>
     <div class="ac-actions">
       <button type="button" class="rv-btn" data-review="revisit">review my answers</button>
-      <button type="button" class="rv-btn primary" data-action="next-theme">choose the next theme ▸</button>
+      <button type="button" class="rv-btn primary" data-action="next-topic">choose the next topic ▸</button>
     </div>
   </div>`;
 }
@@ -562,7 +592,7 @@ function renderSide() {
   if (!state.entries.length || id == null) { els.side.innerHTML = ''; return; }
   const sources = (displayEntry(id).sources || []);
   const rateable = state.mode === 'review';
-  const srcTip = rateable ? ' data-tip="Rate each source for how relevant it is to this theme, from irrelevant (delete) to very relevant (approve)."' : '';
+  const srcTip = rateable ? ' data-tip="Rate each source for how relevant it is to this topic, from irrelevant (delete) to very relevant (approve)."' : '';
   els.side.innerHTML = `
     <section class="side-sec">
       <div class="side-head"${srcTip}><h3>sources</h3><span class="sub">${sources.length}</span></div>
@@ -895,13 +925,39 @@ function selectEntry(id, { animate = true } = {}) {
   if (animate) { els.entry.classList.remove('swap'); void els.entry.offsetWidth; els.entry.classList.add('swap'); }
   hideTip(); if (tour) layoutStep();
 }
-function goNextPending() {
-  const rows = filtered(), i = rows.findIndex(e => String(e.id) === String(state.selectedId));
-  const ordered = i >= 0 ? rows.slice(i + 1).concat(rows.slice(0, i + 1)) : rows;
-  const next = ordered.find(e => String(e.id) !== String(state.selectedId) && topicStatus(e.id) !== 'done');
-  if (!next) { toast('every theme in this view is assessed ✦'); return; }
-  selectEntry(next.id);
+/* enter review on the picked list: jump to the first picked topic that still needs work */
+function startSelectionReview() {
+  if (!selectionCount()) return;
+  const order = orderedSelection();
+  const first = order.find(id => topicStatus(id) !== 'done') || order[0];
+  state.selectedId = first; state.selectedPeriod = 0;
+  startAssessment();
 }
+/* next picked topic (after the current, wrapping) that isn't finished; false if none left */
+function goNextSelected() {
+  const order = orderedSelection(), cur = String(state.selectedId), i = order.indexOf(cur);
+  const rotated = i >= 0 ? order.slice(i + 1).concat(order.slice(0, i + 1)) : order;
+  const next = rotated.find(id => id !== cur && topicStatus(id) !== 'done');
+  if (next) { selectEntry(next); return true; }
+  return false;
+}
+/* "choose the next topic": go to the next picked one, or prompt to pick more when the list is done */
+function goNextTopic() { if (!goNextSelected()) showSelectionDone(); }
+function showSelectionDone() {
+  const n = orderedSelection().filter(id => topicStatus(id) === 'done').length;
+  els.entry.innerHTML = `
+    <div class="assess-complete">
+      <div class="ac-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg></div>
+      <div class="ac-title">your review list is done</div>
+      <div class="ac-sub">you've reviewed all ${n} topic${n === 1 ? '' : 's'} you picked. want to choose more?</div>
+      <div class="ac-actions">
+        <button type="button" class="rv-btn primary" data-action="pick-more">yes, pick more ▸</button>
+        <button type="button" class="rv-btn" data-action="done-review">no, I'm done</button>
+      </div>
+    </div>`;
+  renderSide();
+}
+function goNextPending() { goNextTopic(); }
 function stepEntry(delta) {
   const rows = filtered(), i = rows.findIndex(e => String(e.id) === String(state.selectedId));
   if (i < 0) return;
@@ -945,15 +1001,15 @@ function newStudy() {
    GUIDANCE: spotlight tour + non-modal hover tooltips
    ============================================================ */
 const TOUR = [
-  { target: null, title: 'Welcome', body: "Here's a one-minute tour of how it works. There are two modes: Explore first, then Review. You can skip anytime." },
-  { target: '.index', title: 'The corpus', body: 'Every theme (one diachronic) is listed here. Search or filter, then click one to open it.' },
-  { target: '.entry-title', title: 'The theme', body: 'The visual element, its category, and how its meaning shifted. Nothing here is rewritten: you are here to judge it.' },
-  { target: '.tl-rail', title: 'Period by period', body: 'Each dot is one period of this theme. In Explore mode, click a dot to read what the element meant then, with no pressure to assess yet.' },
-  { target: '.explore-cta', title: 'Explore, then assess', body: 'Read the theme and its periods freely. When you are ready, press Start assessment to switch into Review mode and be guided through the questions.' },
-  { target: '.mode-switch', title: 'Two modes', body: 'Switch between Explore (read-only browsing) and Review (the guided assessment) here at any time.' },
+  { target: null, title: 'Welcome', body: "Here's a one-minute tour. You explore topics, pick the ones you're confident reviewing, then review your list. You can skip anytime." },
+  { target: '.index', title: 'The corpus', body: 'Every topic (one diachronic) is listed here. Search or filter, click one to open it, and use its checkbox to add it to your review list.' },
+  { target: '.entry-title', title: 'The topic', body: 'The visual element, its category, and how its meaning shifted. Nothing here is rewritten: you are here to judge it.' },
+  { target: '.tl-rail', title: 'Period by period', body: 'Each dot is one period of this topic. In Explore mode, click a dot to read what the element meant then, with no pressure to assess yet.' },
+  { target: '.explore-cta', title: 'Pick, then review', body: 'Add the topics you’re confident reviewing to your list, then press "review my list" to assess them one by one.' },
+  { target: '.mode-switch', title: 'Two modes', body: 'Switch between Explore (browse and pick) and Review (the guided assessment) here at any time.' },
   { target: '#side', title: 'Sources and notes', body: 'The sources sit here for reference (you rate them for relevance while reviewing), and you can leave user notes for the team.' },
   { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help, and hover anything for a one-line hint.' },
-  { target: null, title: "You're set", body: "In Review you go period by period: rate each description and confirm its years. A small banner on top asks two yes/no questions about the theme, which you can answer whenever. Happy reviewing." }
+  { target: null, title: "You're set", body: "In Review you go period by period: rate each description and confirm its years. A banner under the title asks two yes/no questions about the topic (a ‘no’ rejects it). When your list is done you’re asked if you want to pick more. Happy reviewing." }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
 function markOnboarded() { try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {} }
@@ -1092,7 +1148,11 @@ function bind() {
   els.search.addEventListener('input', e => { state.search = e.target.value; persistLocal(); renderIndex(); });
   els.filters.addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; state.filter = b.dataset.filter; persistLocal(); renderIndex(true); });
   els.themeFilter.addEventListener('change', e => { state.themeFilter = e.target.value || 'all'; persistLocal(); renderIndex(); });
-  els.entryList.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) selectEntry(b.dataset.id); });
+  els.entryList.addEventListener('click', e => {
+    const chk = e.target.closest('[data-select]');
+    if (chk) { e.preventDefault(); toggleSelect(chk.dataset.select); return; }
+    const b = e.target.closest('[data-id]'); if (b) selectEntry(b.dataset.id);
+  });
 
   // the year slider is the only editable field; live-sync its fill/readout + value bubble while dragging
   els.entry.addEventListener('input', e => {
@@ -1175,7 +1235,8 @@ function bind() {
     } else {
       if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); stepPeriod(1); return; }
       if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); stepPeriod(-1); return; }
-      if (e.key === 'Enter') { e.preventDefault(); startAssessment(); return; }
+      if (k === 's') { e.preventDefault(); toggleSelect(state.selectedId); return; }
+      if (e.key === 'Enter') { e.preventDefault(); if (selectionCount()) startSelectionReview(); return; }
     }
     if (k === 'c') { e.preventDefault(); const t = $('comment-input'); if (t) { t.focus(); } }
     else if (e.key === 'ArrowDown' || k === 'j') { e.preventDefault(); stepEntry(1); }
@@ -1191,8 +1252,11 @@ function handleAction(action, el) {
   else if (action === 'save-comment') saveComment(cid);
   else if (action === 'cancel-comment') cancelEditComment();
   else if (action === 'delete-comment') deleteComment(cid);
-  else if (action === 'start-assessment') startAssessment();
-  else if (action === 'next-theme') goNextPending();
+  else if (action === 'toggle-select-current') toggleSelect(state.selectedId);
+  else if (action === 'review-selection') startSelectionReview();
+  else if (action === 'next-topic') goNextTopic();
+  else if (action === 'pick-more') setMode('explore');
+  else if (action === 'done-review') { setMode('explore'); toast('nice work — your picks are saved.'); }
 }
 
 /* ---------- video login background ---------- */
