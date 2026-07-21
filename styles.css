@@ -168,8 +168,8 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .chip::after{ content:''; position:absolute; left:0; bottom:2px; width:0; height:1px; background:var(--accent); transition:width .3s var(--ease); }
 .chip:hover{ color:var(--text); } .chip:hover::after{ width:100%; }
 .chip.active{ color:var(--text); font-weight:500; } .chip.active::after{ width:100%; }
-.theme-select{ padding:0 1.2rem .8rem; }
-.theme-select select{ width:100%; border:1px solid var(--surface-alt); background:var(--surface); border-radius:99px; padding:.4rem .9rem; font-size:.74rem; font-weight:500; color:var(--muted); appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%); background-position:calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size:5px 5px, 5px 5px; background-repeat:no-repeat; cursor:pointer; transition:border-color .18s var(--ease); }
+.theme-select{ display:block; padding:0 1.2rem .8rem; }
+.theme-select select{ display:block; width:100%; max-width:100%; box-sizing:border-box; text-overflow:ellipsis; border:1px solid var(--surface-alt); background:var(--surface); border-radius:99px; padding:.4rem 1.6rem .4rem .9rem; font-size:.74rem; font-weight:500; color:var(--muted); appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%); background-position:calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size:5px 5px, 5px 5px; background-repeat:no-repeat; cursor:pointer; transition:border-color .18s var(--ease); }
 .theme-select select:hover{ border-color:var(--muted); }
 .theme-select select:focus{ outline:none; border-color:var(--accent); }
 .entry-list{ flex:1; overflow-y:auto; padding:.3rem .6rem 2rem; scrollbar-width:thin; }
@@ -402,6 +402,9 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .lh-btn:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
 .lh-btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
 .lh-btn.primary:hover{ color:#fff; transform:translateY(-1px); }
+.lh-actions{ display:flex; align-items:center; gap:.4rem; flex:0 0 auto; }
+.lh-btn.ghost{ border-color:transparent; background:none; padding:.32rem .55rem; }
+.lh-btn.ghost:hover{ border-color:transparent; color:var(--reject); background:var(--reject-bg); }
 .lh.hint{ font-size:.72rem; color:var(--muted); font-weight:300; font-style:italic; justify-content:flex-start; padding:.35rem .65rem; }
 
 /* review: the guided flow */

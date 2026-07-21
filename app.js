@@ -258,6 +258,14 @@ function applyStudy(data) {
 function isSelected(id) { return state.selection.includes(String(id)); }
 function selectionCount() { return state.selection.length; }
 function orderedSelection() { const set = new Set(state.selection.map(String)); return state.entries.map(e => String(e.id)).filter(id => set.has(id)); }
+/* empty the review list (only clears the queue — any ratings already made are kept) */
+function clearSelection() {
+  if (!selectionCount()) return;
+  state.selection = [];
+  persist();
+  if (state.mode === 'review') setMode('explore'); else render();
+  toast('review list emptied.');
+}
 function toggleSelect(id) {
   id = String(id);
   const i = state.selection.indexOf(id);
@@ -318,12 +326,19 @@ function renderListHead(review) {
     const ids = orderedSelection(), done = ids.filter(id => topicStatus(id) === 'done').length;
     els.listHead.innerHTML = `<div class="lh review">
       <div class="lh-main"><span class="lh-title">your review list</span><span class="lh-sub">${done} of ${ids.length} done</span></div>
-      <button type="button" class="lh-btn" data-action="pick-more" title="back to explore to add more">+ pick more</button>
+      <div class="lh-actions">
+        <button type="button" class="lh-btn ghost" data-action="clear-list" title="empty the review list">clear</button>
+        <button type="button" class="lh-btn" data-action="pick-more" title="back to explore to add more">+ pick more</button>
+      </div>
     </div>`;
   } else {
     const n = selectionCount();
     els.listHead.innerHTML = n
-      ? `<div class="lh explore"><span class="lh-sub"><b>${n}</b> topic${n === 1 ? '' : 's'} picked</span><button type="button" class="lh-btn primary" data-action="review-selection">review ▸</button></div>`
+      ? `<div class="lh explore"><span class="lh-sub"><b>${n}</b> topic${n === 1 ? '' : 's'} picked</span>
+        <div class="lh-actions">
+          <button type="button" class="lh-btn ghost" data-action="clear-list" title="empty the review list">clear</button>
+          <button type="button" class="lh-btn primary" data-action="review-selection">review ▸</button>
+        </div></div>`
       : `<div class="lh explore hint">tick a topic to add it to your review list</div>`;
   }
 }
@@ -1280,6 +1295,7 @@ function handleAction(action, el) {
   else if (action === 'delete-comment') deleteComment(cid);
   else if (action === 'toggle-select-current') toggleSelect(state.selectedId);
   else if (action === 'review-selection') startSelectionReview();
+  else if (action === 'clear-list') clearSelection();
   else if (action === 'next-topic') goNextTopic();
   else if (action === 'pick-more') setMode('explore');
   else if (action === 'done-review') { setMode('explore'); toast('nice work — your picks are saved.'); }
