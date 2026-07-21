@@ -397,11 +397,13 @@ function renderExplore(entry) {
     <div class="tl-rail" data-tip="Each dot is a period of this topic. Click a dot to read what the element meant then.">${periods.map((p, i) => renderNode(p, i)).join('')}</div>
     ${periods.length ? renderExploreFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no periods recorded for this topic.</div>'}
     <div class="explore-cta">
-      <button type="button" class="select-btn${isSelected(entry.id) ? ' on' : ''}" data-action="toggle-select-current">
-        <span class="sel-box" aria-hidden="true"></span><span class="sel-label">${isSelected(entry.id) ? 'in your review list' : 'add to review list'}</span>
-      </button>
       <div class="explore-cta-note">pick the topics you're confident reviewing, then review your list.</div>
-      <button type="button" class="start-assess-btn review-list-btn" data-action="review-selection"${selectionCount() ? '' : ' disabled'}>review my list (<span class="rl-count">${selectionCount()}</span>) <span aria-hidden="true">▸</span></button>
+      <div class="explore-cta-actions">
+        <button type="button" class="select-btn${isSelected(entry.id) ? ' on' : ''}" data-action="toggle-select-current">
+          <span class="sel-box" aria-hidden="true"></span><span class="sel-label">${isSelected(entry.id) ? 'in your review list' : 'add to review list'}</span>
+        </button>
+        <button type="button" class="start-assess-btn review-list-btn" data-action="review-selection"${selectionCount() ? '' : ' disabled'}>review my list (<span class="rl-count">${selectionCount()}</span>)<span class="sa-caret" aria-hidden="true">▸</span></button>
+      </div>
     </div>`;
 }
 /* keep the explore CTA in sync as topics are picked/unpicked (no full re-render) */
