@@ -414,6 +414,7 @@ function renderExplore(entry) {
     <div class="explore-cta">
       <div class="explore-cta-note">pick the topics you're confident reviewing, then review your list.</div>
       <div class="explore-cta-actions">
+        <span class="cta-spacer" aria-hidden="true"></span>
         <button type="button" class="select-btn${isSelected(entry.id) ? ' on' : ''}" data-action="toggle-select-current">
           <span class="sel-box" aria-hidden="true"></span><span class="sel-label">${isSelected(entry.id) ? 'in your review list' : 'add to review list'}</span>
         </button>
