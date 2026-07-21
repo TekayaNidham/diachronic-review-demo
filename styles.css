@@ -384,6 +384,24 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .ei-check.on::after{ content:'✓'; color:#fff; font-size:.72rem; line-height:1; }
 .entry-item.picked{ background:var(--accent-soft); }
 
+/* sidebar is mode-aware: browse tools in explore, the review queue in review */
+.app[data-mode="review"] .browse-tools{ display:none; }
+.app[data-mode="review"] .ei-check{ display:none; }
+.app[data-mode="review"] .entry-item{ padding-right:.75rem; }
+.list-head{ flex:0 0 auto; padding:.6rem 1.2rem .2rem; }
+.app[data-mode="review"] .list-head{ padding-top:1rem; }
+.lh{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.5rem .65rem; border-radius:var(--radius-sm); }
+.lh.review{ background:var(--accent-soft); }
+.lh-main{ display:flex; flex-direction:column; gap:.1rem; min-width:0; }
+.lh-title{ font-size:.6rem; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+.lh-sub{ font-size:.74rem; color:var(--muted); font-weight:400; }
+.lh-sub b{ color:var(--text); font-weight:600; }
+.lh-btn{ flex:0 0 auto; border:1px solid var(--surface-alt); background:var(--surface); color:var(--muted); font-family:inherit; font-size:.74rem; font-weight:500; border-radius:99px; padding:.32rem .8rem; transition:border-color .18s var(--ease), color .18s, background .18s, transform .18s; }
+.lh-btn:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
+.lh-btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.lh-btn.primary:hover{ color:#fff; transform:translateY(-1px); }
+.lh.hint{ font-size:.72rem; color:var(--muted); font-weight:300; font-style:italic; justify-content:flex-start; padding:.35rem .65rem; }
+
 /* review: the guided flow */
 .assess-flow{ flex:1; min-height:0; display:flex; flex-direction:column; }
 .assess-body{ flex:1; min-height:0; display:flex; flex-direction:column; overflow-y:auto; }

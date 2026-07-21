@@ -268,6 +268,7 @@ function toggleSelect(id) {
   if (chk) chk.classList.toggle('on', on);
   const item = els.entryList && els.entryList.querySelector(`.entry-item[data-id="${id}"]`);
   if (item) item.classList.toggle('picked', on);
+  renderListHead(state.mode === 'review');   // keep the sidebar pick-count / review shortcut current
   if (state.mode === 'explore') updateExploreCta();
 }
 
@@ -299,6 +300,7 @@ function render() {
   document.body.dataset.screen = loggedIn ? 'app' : 'intro';
   els.app.hidden = !loggedIn;
   if (!loggedIn) return;
+  els.app.dataset.mode = state.mode;
   renderTop(); renderIndex(true); renderEntry();
 }
 function renderTop() {
@@ -309,6 +311,22 @@ function renderTop() {
   if (els.expertInitials) els.expertInitials.textContent = (state.expert.first_name[0] || '') + (state.expert.last_name[0] || '');
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
 }
+/* the small header above the corpus list: pick-list shortcut in explore, queue summary in review */
+function renderListHead(review) {
+  if (!els.listHead) return;
+  if (review) {
+    const ids = orderedSelection(), done = ids.filter(id => topicStatus(id) === 'done').length;
+    els.listHead.innerHTML = `<div class="lh review">
+      <div class="lh-main"><span class="lh-title">your review list</span><span class="lh-sub">${done} of ${ids.length} done</span></div>
+      <button type="button" class="lh-btn" data-action="pick-more" title="back to explore to add more">+ pick more</button>
+    </div>`;
+  } else {
+    const n = selectionCount();
+    els.listHead.innerHTML = n
+      ? `<div class="lh explore"><span class="lh-sub"><b>${n}</b> topic${n === 1 ? '' : 's'} picked</span><button type="button" class="lh-btn primary" data-action="review-selection">review ▸</button></div>`
+      : `<div class="lh explore hint">tick a topic to add it to your review list</div>`;
+  }
+}
 function renderIndex(animate = false) {
   els.search.value = state.search;
   document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.filter === state.filter));
@@ -317,9 +335,13 @@ function renderIndex(animate = false) {
   els.themeFilter.innerHTML = `<option value="all">all categories (${state.entries.length})</option>` +
     themes.map(t => `<option value="${esc(t)}">${esc(t)} (${state.entries.filter(e => themeForEntry(e) === t).length})</option>`).join('');
   els.themeFilter.value = state.themeFilter;
-  const list = filtered();
+  const review = state.mode === 'review';
+  renderListHead(review);
+  const list = review
+    ? orderedSelection().map(id => state.entries.find(e => String(e.id) === id)).filter(Boolean)
+    : filtered();
   els.entryList.classList.toggle('stagger', animate && !prefersReducedMotion());
-  if (!list.length) { els.entryList.innerHTML = '<div class="empty">no diachronics match.</div>'; return; }
+  if (!list.length) { els.entryList.innerHTML = review ? '<div class="empty">your review list is empty — go to Explore and pick some topics.</div>' : '<div class="empty">no topics match.</div>'; return; }
   // keep the current selection even if a filter would hide it (e.g. it just moved from "to do" to "in progress"),
   // so a review in progress is never yanked away; only pick a default when nothing is selected yet.
   if (state.selectedId == null) state.selectedId = list[0].id;
@@ -719,12 +741,13 @@ function deleteComment(cid) {
 function setMode(mode) {
   if (mode !== 'explore' && mode !== 'review') return;
   if (mode === state.mode) return;
-  if (mode === 'review') { startAssessment(); return; }
+  if (mode === 'review') { if (selectionCount()) startSelectionReview(); else startAssessment(); return; }
   state.mode = 'explore'; state.reviewComplete = false; state.reviewEditTheme = false; persist(); render();
 }
-/* enter the guide for the current theme, resuming at the first unanswered step */
+/* enter the guide for the current topic, resuming at the first unanswered step */
 function startAssessment() {
   const id = state.selectedId;
+  if (!isSelected(id)) state.selection.push(String(id));   // whatever you're reviewing belongs in the list
   state.mode = 'review';
   state.reviewEditTheme = false;
   state.reviewComplete = assessmentDone(id);
@@ -1153,6 +1176,7 @@ function bind() {
     if (chk) { e.preventDefault(); toggleSelect(chk.dataset.select); return; }
     const b = e.target.closest('[data-id]'); if (b) selectEntry(b.dataset.id);
   });
+  els.listHead.addEventListener('click', e => { const b = e.target.closest('[data-action]'); if (b) handleAction(b.dataset.action, b); });
 
   // the year slider is the only editable field; live-sync its fill/readout + value bubble while dragging
   els.entry.addEventListener('input', e => {
@@ -1295,7 +1319,7 @@ function initEls() {
     app: $('app'), intro: $('intro'), introForm: $('intro-form'), introStatus: $('intro-status'), introCount: $('intro-count'),
     studyFile: $('study-file'), pbarFill: $('pbar-fill'), progressLabel: $('progress-label'),
     saveDot: $('save-dot'), saveText: $('save-text'), menuBtn: $('menu-btn'), menuPop: $('menu-pop'), menuName: $('menu-name'), expertInitials: $('expert-initials'),
-    search: $('search'), filters: $('filters'), themeFilter: $('theme-filter'), entryList: $('entry-list'),
+    search: $('search'), filters: $('filters'), themeFilter: $('theme-filter'), entryList: $('entry-list'), listHead: $('list-head'),
     stage: $('stage'), entry: $('entry'), side: $('side'), toast: $('toast')
   });
 }

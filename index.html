@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=2026-07-21-uipolish">
+<link rel="stylesheet" href="styles.css?v=2026-07-21-queue">
 </head>
 <body data-screen="intro">
 
@@ -85,18 +85,21 @@
 
   <div class="shell">
     <aside class="index">
-      <div class="index-search" data-tip="Type to filter the corpus by name, era, meaning, or source. Shortcut: press /">
-        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <input id="search" type="search" placeholder="search  ( / )" autocomplete="off">
+      <div class="browse-tools">
+        <div class="index-search" data-tip="Type to filter the corpus by name, era, meaning, or source. Shortcut: press /">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input id="search" type="search" placeholder="search  ( / )" autocomplete="off">
+        </div>
+        <div class="index-filters" id="filters" role="group" aria-label="Filter" data-tip="Narrow the list by review state: not started, in progress, or finished.">
+          <button class="chip active" data-filter="all">all</button>
+          <button class="chip" data-filter="pending">to do</button>
+          <button class="chip" data-filter="started">in progress</button>
+          <button class="chip" data-filter="done">done</button>
+        </div>
+        <label class="theme-select"><select id="theme-filter" aria-label="Category"><option value="all">all categories</option></select></label>
       </div>
-      <div class="index-filters" id="filters" role="group" aria-label="Filter" data-tip="Narrow the list by review state: not started, in progress, or finished.">
-        <button class="chip active" data-filter="all">all</button>
-        <button class="chip" data-filter="pending">to do</button>
-        <button class="chip" data-filter="started">in progress</button>
-        <button class="chip" data-filter="done">done</button>
-      </div>
-      <label class="theme-select"><select id="theme-filter" aria-label="Category"><option value="all">all categories</option></select></label>
-      <nav id="entry-list" class="entry-list" aria-label="Diachronic entries"></nav>
+      <div id="list-head" class="list-head"></div>
+      <nav id="entry-list" class="entry-list" aria-label="Topics"></nav>
     </aside>
 
     <main class="stage" id="stage">
@@ -135,6 +138,6 @@
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="app.js?v=2026-07-21-uipolish"></script>
+<script src="app.js?v=2026-07-21-queue"></script>
 </body>
 </html>
