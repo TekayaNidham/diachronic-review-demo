@@ -405,12 +405,13 @@ function topicHead(entry) {
   </div>`;
 }
 /* ---------- EXPLORE mode: read-only, no assessment ---------- */
+/* every period's description is shown at once on a vertical timeline, so the reviewer reads the
+   whole story in one scroll (no per-period clicking — there's no feedback to give here) */
 function renderExplore(entry) {
   const periods = entry.periods || [];
   els.entry.innerHTML = `
     ${topicHead(entry)}
-    <div class="tl-rail" data-tip="Each dot is a period of this topic. Click a dot to read what the element meant then.">${periods.map((p, i) => renderNode(p, i)).join('')}</div>
-    ${periods.length ? renderExploreFocus(periods[state.selectedPeriod], state.selectedPeriod) : '<div class="empty">no periods recorded for this topic.</div>'}
+    ${periods.length ? `<div class="explore-timeline">${periods.map(renderExplorePeriod).join('')}</div>` : '<div class="empty">no periods recorded for this topic.</div>'}
     <div class="explore-cta">
       <div class="explore-cta-note">pick the topics you're confident reviewing, then review your list.</div>
       <div class="explore-cta-actions">
@@ -430,16 +431,13 @@ function updateExploreCta() {
   const sb = els.entry.querySelector('.select-btn');
   if (sb) { const on = isSelected(state.selectedId); sb.classList.toggle('on', on); const l = sb.querySelector('.sel-label'); if (l) l.textContent = on ? 'in your review list' : 'add to review list'; }
 }
-function renderExploreFocus(period, i) {
-  return `<div class="period-focus explore">
-    <div class="pf-top">
-      <div class="pf-index">period ${i + 1} <span>of ${periodCount(state.selectedId)}</span></div>
-      <span class="pf-years-read">${esc(yearsLabel(period) || '—')}</span>
-    </div>
-    ${period.context ? `<div class="pf-ctx-read">${esc(period.context)}</div>` : ''}
-    <div class="pf-meaning-wrap">
-      <div class="pf-meaning-label">what it meant then</div>
-      <div class="pf-meaning">${esc(period.meaning || 'no description recorded for this period.')}</div>
+/* one node of the explore reading-timeline: years + context + the full meaning, always visible */
+function renderExplorePeriod(period, i) {
+  return `<div class="et-period">
+    <div class="et-rail"><span class="et-dot"></span></div>
+    <div class="et-body">
+      <div class="et-head"><span class="et-years">${esc(yearsLabel(period) || '—')}</span>${period.context ? `<span class="et-ctx">${esc(period.context)}</span>` : ''}</div>
+      <div class="et-meaning">${esc(period.meaning || 'no description recorded for this period.')}</div>
     </div>
   </div>`;
 }
@@ -852,15 +850,6 @@ function updateSourceUI(i) {
   if (rank) { rank.className = 'src-rank ' + (v == null ? 'none' : likertClass(v)); rank.textContent = v == null ? 'rate relevance' : srcLabel(v); }
 }
 /* explore mode: click a timeline dot to read that period (read-only, no re-render thrash) */
-function exploreSelectPeriod(i) {
-  state.selectedPeriod = i;
-  const nodes = els.entry.querySelectorAll('.tl-node');
-  nodes.forEach((n, idx) => n.classList.toggle('active', idx === i));
-  if (nodes[i] && !prefersReducedMotion()) nodes[i].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  const periods = displayEntry(state.selectedId).periods || [];
-  const focus = els.entry.querySelector('.period-focus');
-  if (periods[i] && focus) { const tmp = document.createElement('div'); tmp.innerHTML = renderExploreFocus(periods[i], i); focus.replaceWith(tmp.firstElementChild); }
-}
 /* review mode: click a period dot to jump straight to that period's step */
 function reviewSelectPeriod(i) {
   const steps = assessmentSteps(state.selectedId);
@@ -940,10 +929,9 @@ function stepYear(which, dir) {
   inp.value = Math.max(min, Math.min(max, Number(inp.value) + dir));
   syncRange(inp); commitField(inp);
 }
-function stepPeriod(delta) {   // explore-mode period browsing
-  const n = periodCount(state.selectedId); if (!n) return;
-  const i = Math.min(n - 1, Math.max(0, state.selectedPeriod + delta));
-  if (i !== state.selectedPeriod) exploreSelectPeriod(i);
+function scrollExplore(dir) {   // explore arrows scroll the reading timeline
+  const tl = els.entry.querySelector('.explore-timeline');
+  if (tl) tl.scrollBy({ top: dir * 220, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 /* never discard: leaving a half-answered theme just reminds you it isn't finished; progress is kept */
 function remindIfUnfinished(leavingId, targetId) {
@@ -1224,7 +1212,7 @@ function bind() {
     const act = e.target.closest('[data-action]');
     if (act) { handleAction(act.dataset.action, act); return; }
     const node = e.target.closest('.tl-node');
-    if (node) { const i = Number(node.dataset.period); if (state.mode === 'review') reviewSelectPeriod(i); else exploreSelectPeriod(i); }
+    if (node && state.mode === 'review') { reviewSelectPeriod(Number(node.dataset.period)); }
   });
 
   // sources + comments live in the side column
@@ -1275,8 +1263,8 @@ function bind() {
       if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); reviewNext(); return; }
       if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); reviewBack(); return; }
     } else {
-      if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); stepPeriod(1); return; }
-      if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); stepPeriod(-1); return; }
+      if (e.key === 'ArrowRight' || k === 'l') { e.preventDefault(); scrollExplore(1); return; }
+      if (e.key === 'ArrowLeft' || k === 'h') { e.preventDefault(); scrollExplore(-1); return; }
       if (k === 's') { e.preventDefault(); toggleSelect(state.selectedId); return; }
       if (e.key === 'Enter') { e.preventDefault(); if (selectionCount()) startSelectionReview(); return; }
     }
