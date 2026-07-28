@@ -249,6 +249,8 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .year-box .yr-input:hover{ border-color:var(--muted); }
 .year-box .yr-input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
 .year-box .yr-input::-webkit-outer-spin-button, .year-box .yr-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.year-was{ font-size:.66rem; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:.02em; white-space:nowrap; }
+.year-was b{ font-weight:600; color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px; }
 .step-btn{ width:22px; height:22px; border-radius:6px; border:1px solid var(--surface-alt); background:var(--surface); color:var(--muted); font-size:1rem; line-height:1; display:grid; place-items:center; padding:0; transition:border-color .14s, color .14s, background .14s; }
 .step-btn:hover{ border-color:var(--accent); color:var(--accent); }
 .step-btn:active{ background:var(--accent-soft); }
@@ -257,6 +259,9 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 /* track + ticks inset by the thumb radius (9px) so handles, fill and year labels line up */
 .range-track{ position:absolute; top:18px; left:9px; right:9px; height:6px; background:var(--surface-alt); border-radius:99px; }
 .range-fill{ position:absolute; top:0; bottom:0; background:var(--accent); border-radius:99px; }
+/* ghost of the original span: a muted band left behind once the range is edited */
+.range-ghost{ position:absolute; top:-3px; bottom:-3px; background:var(--muted); opacity:.22; border-radius:99px; display:none; }
+.range-dual.changed .range-ghost{ display:block; }
 .ts-ticks{ position:absolute; top:18px; left:9px; right:9px; height:0; pointer-events:none; }
 .ts-tick{ position:absolute; top:0; }
 .ts-tick::before{ content:''; position:absolute; left:0; top:8px; width:1px; height:5px; background:var(--surface-alt); transform:translateX(-50%); }

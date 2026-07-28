@@ -112,7 +112,7 @@ function firstUnansweredStep(id) {
   for (let i = 0; i < n; i++) if (periodRating(id, i) == null) return i;
   return Math.max(0, n - 1);
 }
-/* topic lifecycle: 'pending' (untouched) · 'started' (some answered) · 'done' (theme + every era answered) */
+/* topic lifecycle: 'pending' (untouched) · 'started' (some answered) · 'done' (theme + every period answered) */
 function topicStatus(id) {
   const total = assessmentTotal(id); if (!total) return 'pending';
   const done = assessmentDoneCount(id);
@@ -577,7 +577,7 @@ function renderNode(period, i, activeIdx) {
   return `<button class="tl-node${active}${cls}" style="--i:${i}" data-period="${i}">
     <span class="tl-dot"></span>
     <span class="tl-years">${esc(yearsLabel(period))}</span>
-    <span class="tl-ctx">${esc(period.context || period.period || 'era ' + (i + 1))}</span>
+    <span class="tl-ctx">${esc(period.context || period.period || 'period ' + (i + 1))}</span>
   </button>`;
 }
 function renderFocus(period, i) {
@@ -586,21 +586,26 @@ function renderFocus(period, i) {
     : `<span class="pf-verdict ${likertClass(v)}">rated: ${esc(likertLabel(v))}</span>`;
   const a = period.year_start != null ? period.year_start : YEAR_MIN;
   const b = period.year_end != null ? period.year_end : YEAR_MAX;
+  const oPeriod = ((original(state.selectedId) || {}).periods || [])[i] || {};
+  const oa = oPeriod.year_start != null ? oPeriod.year_start : a;
+  const ob = oPeriod.year_end != null ? oPeriod.year_end : b;
+  const yrChanged = oa !== a || ob !== b;
   const dots = LIKERT.map(o =>
     `<button class="likert-dot ${likertClass(o.v)}${o.v === v ? ' on' : ''}" data-likert="${o.v}" title="${esc(o.label)}" aria-label="${esc(o.label)}"><span></span></button>`
   ).join('');
   return `<div class="period-focus" data-rating="${v || 'pending'}">
     <div class="pf-top">
-      <div class="pf-index">era ${i + 1} <span>of ${periodCount(state.selectedId)}</span></div>
+      <div class="pf-index">period ${i + 1} <span>of ${periodCount(state.selectedId)}</span></div>
       ${badge}
     </div>
-    <div class="pf-years" data-tip="Correct the era's start and end year: drag the handles along the timeline (a bubble shows the year), use the − / + buttons, or type into the from / to boxes. This is the only thing on the page you can change.">
+    <div class="pf-years" data-tip="Correct the period's start and end year: drag the handles along the timeline (a bubble shows the year), use the − / + buttons, or type into the from / to boxes. This is the only thing on the page you can change.">
       <div class="year-steppers">
         <div class="year-box"><label>from</label><button type="button" class="step-btn" data-step="start" data-dir="-1" aria-label="earlier start">−</button><input type="number" inputmode="numeric" class="yr-input yr-from" data-year="start" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${a}" aria-label="start year"><button type="button" class="step-btn" data-step="start" data-dir="1" aria-label="later start">+</button></div>
         <div class="year-box"><label>to</label><button type="button" class="step-btn" data-step="end" data-dir="-1" aria-label="earlier end">−</button><input type="number" inputmode="numeric" class="yr-input yr-to" data-year="end" min="${YEAR_MIN}" max="${YEAR_MAX}" value="${b}" aria-label="end year"><button type="button" class="step-btn" data-step="end" data-dir="1" aria-label="later end">+</button></div>
+        <div class="year-was" aria-live="polite"${yrChanged ? '' : ' hidden'}>was <b class="yw-lo">${oa}</b>-<b class="yw-hi">${ob}</b></div>
       </div>
-      <div class="timeline-slider range-dual" data-min="${YEAR_MIN}" data-max="${YEAR_MAX}">
-        <div class="range-track"><div class="range-fill"></div></div>
+      <div class="timeline-slider range-dual" data-min="${YEAR_MIN}" data-max="${YEAR_MAX}" data-orig-lo="${oa}" data-orig-hi="${ob}">
+        <div class="range-track"><div class="range-ghost"></div><div class="range-fill"></div></div>
         <div class="ts-ticks">${yearTicks(YEAR_MIN, YEAR_MAX)}</div>
         <div class="range-bubbles" aria-hidden="true">
           <div class="range-bubble range-bubble-lo"></div>
@@ -610,9 +615,9 @@ function renderFocus(period, i) {
         <input type="range" class="range-hi" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" value="${b}" data-path="periods.${i}.year_end" aria-label="end year">
       </div>
     </div>
-    <div class="pf-meaning-wrap" data-tip="Read how the element's meaning is described for this era, then rate the description below.">
+    <div class="pf-meaning-wrap" data-tip="Read how the element's meaning is described for this period, then rate the description below.">
       <div class="pf-meaning-label">what it meant then</div>
-      <div class="pf-meaning">${esc(period.meaning || 'no description recorded for this era.')}</div>
+      <div class="pf-meaning">${esc(period.meaning || 'no description recorded for this period.')}</div>
     </div>
     <div class="pf-likert" data-tip="Rate how correct this description is, from incorrect (delete) to correct (approve). This judges the description above. Keys 1-5 also work.">
       <div class="likert-q">how accurate is this description?</div>
@@ -862,7 +867,7 @@ function updatePeriodNode(i) {
   node.classList.remove('rated', 'lv1', 'lv2', 'lv3', 'lv4', 'lv5');
   if (v != null) node.classList.add('rated', likertClass(v));
 }
-/* refresh the Likert selection + badge for the focused era without re-rendering (no anim thrash) */
+/* refresh the Likert selection + badge for the focused period without re-rendering (no anim thrash) */
 function updateLikertUI() {
   const v = periodRating(state.selectedId, state.selectedPeriod);
   els.entry.querySelectorAll('.likert-dot').forEach(d => d.classList.toggle('on', Number(d.dataset.likert) === v));
@@ -884,11 +889,20 @@ function syncRange(input) {
   const bLo = dual.querySelector('.range-bubble-lo'), bHi = dual.querySelector('.range-bubble-hi');
   if (bLo) { bLo.style.left = l + '%'; bLo.textContent = a; }
   if (bHi) { bHi.style.left = r + '%'; bHi.textContent = b; }
+  // original (pre-edit) span: ghost bar + "was" readout, shown only once the range moves off it
+  const oa = Number(dual.dataset.origLo), ob = Number(dual.dataset.origHi);
+  const hasOrig = !Number.isNaN(oa) && !Number.isNaN(ob);
+  const changed = hasOrig && (a !== oa || b !== ob);
+  const ghost = dual.querySelector('.range-ghost');
+  if (ghost && hasOrig) { const gl = ((oa - min) / span) * 100, gr = ((ob - min) / span) * 100; ghost.style.left = gl + '%'; ghost.style.width = Math.max(0, gr - gl) + '%'; }
+  dual.classList.toggle('changed', changed);
   const card = input.closest('.period-focus');
   if (card) {
     const f = card.querySelector('.yr-from'), t = card.querySelector('.yr-to');
     if (f && f !== document.activeElement) f.value = a;
     if (t && t !== document.activeElement) t.value = b;
+    const was = card.querySelector('.year-was');
+    if (was) { was.hidden = !changed; const wl = was.querySelector('.yw-lo'), wh = was.querySelector('.yw-hi'); if (wl) wl.textContent = oa; if (wh) wh.textContent = ob; }
   }
   const node = els.entry.querySelectorAll('.tl-node')[state.selectedPeriod];
   if (node) { const s = node.querySelector('.tl-years'); if (s) s.textContent = `${a}-${b}`; }
