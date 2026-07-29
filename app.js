@@ -22,7 +22,7 @@ function saveEndpoints() {
   if (configured) return [configured];
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1' || h === '') return ['/api/save-review', 'http://localhost:8000/api/save-review'];
-  return ['/api/save-review'];
+  return [];   // static host (e.g. GitHub Pages) with no configured collector: browser-only, no server round-trip
 }
 
 const state = {
@@ -162,7 +162,7 @@ function snapshot() {
 function persistLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot())); return true; } catch (e) { console.warn('local save failed', e); return false; } }
 function persist() {
   const ok = persistLocal();
-  if (ok) { hideDangerBanner(); setSave('local', 'saved'); } else { showDangerBanner(); setSave('error', 'not saved'); }
+  if (ok) { hideDangerBanner(); setSave('local', saveEndpoints().length ? 'saved' : 'saved in browser'); } else { showDangerBanner(); setSave('error', 'not saved'); }
   scheduleServerSave();
 }
 function hasWork() {
@@ -187,7 +187,8 @@ function hideDangerBanner() { const b = $('save-banner'); if (b) b.hidden = true
 function flushSave() {
   if (!state.expert) return;
   persistLocal();
-  try { if (navigator.sendBeacon) navigator.sendBeacon(saveEndpoints()[0], new Blob([JSON.stringify(snapshot())], { type: 'application/json' })); } catch (_) {}
+  const ep = saveEndpoints()[0];
+  try { if (ep && navigator.sendBeacon) navigator.sendBeacon(ep, new Blob([JSON.stringify(snapshot())], { type: 'application/json' })); } catch (_) {}
 }
 function setSave(mode, text) {
   if (!els.saveDot) return;
@@ -195,7 +196,7 @@ function setSave(mode, text) {
   if (els.saveText) els.saveText.textContent = text;
   if (mode === 'live' || mode === 'local') replayAnim(els.saveDot, 'just-saved');   // a soft heartbeat each time work settles
 }
-function scheduleServerSave() { clearTimeout(saver.timer); saver.timer = setTimeout(serverSave, 900); }
+function scheduleServerSave() { if (!saveEndpoints().length) return; clearTimeout(saver.timer); saver.timer = setTimeout(serverSave, 900); }
 async function serverSave() {
   if (saver.inFlight) { saver.again = true; return; }
   saver.inFlight = true; setSave('saving', 'saving…');
