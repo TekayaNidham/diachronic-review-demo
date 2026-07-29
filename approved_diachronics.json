@@ -2,7 +2,7 @@
   "metadata": {
     "title": "Approved Visual Diachronics Corpus",
     "source_file": "dataset/visual_diachronics.json",
-    "generated_at": "2026-07-29T10:42:51",
+    "generated_at": "2026-07-29T10:54:58",
     "status_filter": "approved",
     "entry_count": 148,
     "category_count": 19,
@@ -129,11 +129,25 @@
       ],
       "sources": [
         {
-          "citation": "Spanier, D. & Smith, M. The Miniskirt: Fashion, Feminism and the Swinging Sixties. Routledge, 2023",
-          "doi": null,
-          "url": null,
+          "citation": "Burgess, T. Cinema, Bell Bottoms, and Miniskirts: Struggles over Youth and Citizenship in Revolutionary Zanzibar. International Journal of African Historical Studies, 2002",
+          "doi": "https://doi.org/10.2307/3097615",
+          "url": "https://doi.org/10.2307/3097615",
           "tier": 1,
-          "verified": false
+          "verified": true
+        },
+        {
+          "citation": "de la Haye, A. Quant, Mary. The Berg Companion to Fashion, 2010",
+          "doi": "https://doi.org/10.5040/9781474264716.0013026",
+          "url": "https://doi.org/10.5040/9781474264716.0013026",
+          "tier": 1,
+          "verified": true
+        },
+        {
+          "citation": "Nencel, L. Que Viva La Minifalda! Secretaries, Miniskirts and Daily Practices of Sexuality in the Public Sector in Lima. Gender, Work & Organization, 2009",
+          "doi": "https://doi.org/10.1111/j.1468-0432.2008.00408.x",
+          "url": "https://doi.org/10.1111/j.1468-0432.2008.00408.x",
+          "tier": 1,
+          "verified": true
         }
       ]
     },
@@ -2878,11 +2892,18 @@
       ],
       "sources": [
         {
-          "citation": "Ibrahim, Y. Food Porn: The Visual Fetishization of Food in Digital Media. In Digital Food Cultures, Routledge, 2020",
-          "doi": null,
-          "url": null,
+          "citation": "Ruchatz, J. The Recipe and Photography. In Food - Media - Senses, transcript Verlag, 2023",
+          "doi": "https://doi.org/10.1515/9783839464793-009",
+          "url": "https://doi.org/10.1515/9783839464793-009",
           "tier": 1,
-          "verified": false
+          "verified": true
+        },
+        {
+          "citation": "Bartz, C., Ruchatz, J. & Wattolik, E. Food - Media - Senses (Introduction). transcript Verlag, 2023",
+          "doi": "https://doi.org/10.1515/9783839464793-001",
+          "url": "https://doi.org/10.1515/9783839464793-001",
+          "tier": 1,
+          "verified": true
         }
       ]
     },
@@ -3574,11 +3595,18 @@
       ],
       "sources": [
         {
-          "citation": "Barton, D.D.A. The History and Development of the Ambulance Service. Emergency Medicine Journal, 25(6), 2008",
+          "citation": "Wikipedia: History of the ambulance",
           "doi": null,
-          "url": null,
+          "url": "https://en.wikipedia.org/wiki/History_of_the_ambulance",
+          "tier": 4,
+          "verified": true
+        },
+        {
+          "citation": "Robertson-Steel, I. Evolution of triage systems. Emergency Medicine Journal, 23(2), 2006",
+          "doi": "https://doi.org/10.1136/emj.2005.030270",
+          "url": "https://doi.org/10.1136/emj.2005.030270",
           "tier": 1,
-          "verified": false
+          "verified": true
         }
       ]
     },
@@ -5907,11 +5935,18 @@
       ],
       "sources": [
         {
-          "citation": "Ackerman, K. The Potential of Urban Agriculture in New York City. Columbia UP, 2012",
-          "doi": null,
-          "url": null,
+          "citation": "Lovell, S.T. Multifunctional Urban Agriculture for Sustainable Land Use Planning in the United States. Sustainability, 2(8), 2010",
+          "doi": "https://doi.org/10.3390/su2082499",
+          "url": "https://doi.org/10.3390/su2082499",
           "tier": 1,
-          "verified": false
+          "verified": true
+        },
+        {
+          "citation": "Lal, R. Home gardening and urban agriculture for advancing food and nutritional security in response to the COVID-19 pandemic. Food Security, 12, 2020",
+          "doi": "https://doi.org/10.1007/s12571-020-01058-3",
+          "url": "https://doi.org/10.1007/s12571-020-01058-3",
+          "tier": 1,
+          "verified": true
         }
       ]
     },
@@ -6809,11 +6844,25 @@
       ],
       "sources": [
         {
-          "citation": "Hall, P. Cities of Tomorrow (chapter). In: Cities of Tomorrow. Routledge, 2014",
-          "doi": null,
-          "url": null,
+          "citation": "Jacobs, J.M., Cairns, S. & Strebel, I. A Tall Storey ... but, a Fact Just the Same: The Red Road High-rise as a Black Box. Urban Studies, 44(3), 2007",
+          "doi": "https://doi.org/10.1080/00420980601131910",
+          "url": "https://doi.org/10.1080/00420980601131910",
           "tier": 1,
-          "verified": false
+          "verified": true
+        },
+        {
+          "citation": "Hall, T. & Viden, S. The Million Homes Programme: a review of the great Swedish planning project. Planning Perspectives, 20(3), 2005",
+          "doi": "https://doi.org/10.1080/02665430500130233",
+          "url": "https://doi.org/10.1080/02665430500130233",
+          "tier": 1,
+          "verified": true
+        },
+        {
+          "citation": "Hess, D.B., Tammaru, T. & van Ham, M. (eds). Housing Estates in Europe. The Urban Book Series, Springer, 2018",
+          "doi": "https://doi.org/10.1007/978-3-319-92813-5",
+          "url": "https://doi.org/10.1007/978-3-319-92813-5",
+          "tier": 1,
+          "verified": true
         }
       ]
     },
