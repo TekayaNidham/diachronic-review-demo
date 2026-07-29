@@ -2,7 +2,7 @@
   "metadata": {
     "title": "Approved Visual Diachronics Corpus",
     "source_file": "dataset/visual_diachronics.json",
-    "generated_at": "2026-07-29T09:49:30",
+    "generated_at": "2026-07-29T10:20:53",
     "status_filter": "approved",
     "entry_count": 148,
     "category_count": 19,
@@ -13,7 +13,7 @@
       "u-shaped": 14,
       "accumulative": 24
     },
-    "note": "Curated build: topics whose only source was an invalid search link were removed; remaining topics keep only live-verified sources; period descriptions enriched from the source-grounded curation pass where available.",
+    "note": "Curated build. Topics whose only source was an invalid search link were removed. Remaining topics keep only live, title-verified sources: each source link was checked against the real work at its DOI/URL (via Crossref/OpenLibrary) and corrected or removed where it did not match; unmatched references are shown as citation text without a link. Period descriptions enriched from the source-grounded curation pass where available.",
     "sort": "id ascending"
   },
   "entries": [
@@ -131,9 +131,9 @@
         {
           "citation": "Spanier, D. & Smith, M. The Miniskirt: Fashion, Feminism and the Swinging Sixties. Routledge, 2023",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL11702357W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -183,8 +183,8 @@
       "sources": [
         {
           "citation": "Miller, D. & Woodward, S. Global Denim. Berg, 2011",
-          "doi": "https://doi.org/10.1086/669745",
-          "url": "https://www.journals.uchicago.edu/doi/10.1086/669745",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL16955017W",
           "tier": 1,
           "verified": true
         }
@@ -289,8 +289,8 @@
       "sources": [
         {
           "citation": "Steele, V. The Corset: A Cultural History. Yale UP, 2001",
-          "doi": "https://doi.org/10.1353/yale.1998.0023",
-          "url": "https://muse.jhu.edu/verify?url=%2Farticle%2F36798&r=977787",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL891140W",
           "tier": 1,
           "verified": true
         },
@@ -362,11 +362,11 @@
           "verified": true
         },
         {
-          "citation": "Matthews, D. et al. The sneaker â€“ marketplace icon. Consumption Markets & Culture, 24(5), 2021",
+          "citation": "Matthews, D. et al. The sneaker - marketplace icon. Consumption Markets & Culture, 24(5), 2021",
           "doi": null,
-          "url": "https://www.tandfonline.com/doi/full/10.1080/10253866.2020.1741357",
+          "url": null,
           "tier": 6,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -472,7 +472,7 @@
           "doi": null,
           "url": "https://www.academia.edu/12211447/_The_Hoodie_as_Sign_Screen_Expectation_and_Force_",
           "tier": 2,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -583,9 +583,9 @@
         {
           "citation": "Kang, M. & Jones, K. Why Do People Get Tattoos? Contexts, 6(1), 2007",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL31465881W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -689,9 +689,9 @@
         {
           "citation": "Mears, A. & Connell, C. The Paradoxical Value of Deviant Cases: Toward a Gendered Theory of Display in Fashion Modeling. Social Forces, 94(2), 2015",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL616702W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -1020,8 +1020,8 @@
       "sources": [
         {
           "citation": "Lubin, D.M. Grand Illusions: American Art and the First World War. Oxford UP, 2016",
-          "doi": "https://doi.org/10.1017/s002187581800107x",
-          "url": "https://www.cambridge.org/core/journals/journal-of-american-studies/article/abs/david-lubin-grand-illusions-american-art-and-the-first-world-war-new-york-oxford-university-press-2016-3995-pp-344-isbn978-0-1902-1861-4/8A6829CD7E471AFEED0B5CB4A6AB0C40",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL20035007W",
           "tier": 1,
           "verified": true
         }
@@ -1134,9 +1134,9 @@
         {
           "citation": "Stark, L. & Crawford, K. The Conservatism of Emoji: Work, Affect, and Communication. Social Media + Society, 1(2), 2015",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL14987586W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -1366,8 +1366,8 @@
       "sources": [
         {
           "citation": "Marien, M.W. Photography: A Cultural History. 4th ed. Pearson, 2014",
-          "doi": "https://doi.org/10.1525/aft.1988.16.3.4",
-          "url": "https://online.ucpress.edu/afterimage/article/16/3/4/181815/Another-History-of-Photography",
+          "doi": "https://doi.org/10.1093/gao/9781884446054.article.t067117",
+          "url": "https://doi.org/10.1093/gao/9781884446054.article.t067117",
           "tier": 1,
           "verified": true
         }
@@ -1638,17 +1638,17 @@
       "sources": [
         {
           "citation": "Glasmeier, A. Manufacturing Time: Global Competition in the Watch Industry, 1795-2000. Guilford Press, 2000",
-          "doi": "https://doi.org/10.1086/426253",
-          "url": "https://www.journals.uchicago.edu/doi/10.1086/426253",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL20977793W",
           "tier": 1,
           "verified": true
         },
         {
           "citation": "Thompson, J. Watches: A Complete History of Timekeeping. Thames & Hudson, 2022",
-          "doi": "https://doi.org/10.1119/5.0096793",
-          "url": "https://pubs.aip.org/ajp/article/90/7/549/2820147/A-Brief-History-of-Timekeeping",
+          "doi": null,
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -1698,17 +1698,17 @@
       "sources": [
         {
           "citation": "Douglas, S.J. Listening In: Radio and the American Imagination. U of Minnesota P, 2004",
-          "doi": "https://doi.org/10.2307/2675243",
-          "url": "https://academic.oup.com/jah/article-lookup/doi/10.2307/2675243",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL3452484W",
           "tier": 1,
           "verified": true
         },
         {
           "citation": "Hilmes, M. Only Connect: A Cultural History of Broadcasting in the US. 4th ed. Wadsworth, 2020",
-          "doi": "https://doi.org/10.1525/9780520940604-024",
-          "url": "https://www.degruyterbrill.com/document/doi/10.1525/9780520940604-024/html",
+          "doi": null,
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -2878,10 +2878,10 @@
       "sources": [
         {
           "citation": "Ibrahim, Y. Food Porn: The Visual Fetishization of Food in Digital Media. In Digital Food Cultures, Routledge, 2020",
-          "doi": "https://doi.org/10.1057/9781137463234_14",
-          "url": "http://link.springer.com/10.1057/9781137463234_14",
+          "doi": null,
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -2932,16 +2932,16 @@
         {
           "citation": "Cohen, J. & Richardson, J. Pit Bull Panic. Journal of Popular Culture, 36(2), 285-317, 2002",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL2873260W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         },
         {
           "citation": "Twining, H., Arluke, A. & Patronek, G. Managing the Stigma of Outlaw Breeds: A Case Study of Pit Bull Owners. Society & Animals, 8(1), 2000",
           "doi": null,
-          "url": "https://www.researchgate.net/publication/233484216",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -3310,7 +3310,7 @@
         {
           "citation": "Newark, T. Camouflage. Thames & Hudson, 2007",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL24707189W",
+          "url": "https://openlibrary.org/works/OL13671617W",
           "tier": 1,
           "verified": true
         }
@@ -3362,8 +3362,8 @@
       "sources": [
         {
           "citation": "The Gas Mask in Interwar Germany. In: The Gas Mask in the World Wars. Cambridge UP, 2023",
-          "doi": "https://doi.org/10.1017/9781009314862.003",
-          "url": "https://www.cambridge.org/core/books/abs/gas-mask-in-interwar-germany/man-in-the-rubber-mask-world-war-i-and-the-development-of-the-modern-gas-mask/18A5C8D61AFA75EB80E1EB781EEEA4F9",
+          "doi": "https://doi.org/10.1017/9781009314862",
+          "url": "https://doi.org/10.1017/9781009314862",
           "tier": 1,
           "verified": true
         }
@@ -3574,10 +3574,10 @@
       "sources": [
         {
           "citation": "Barton, D.D.A. The History and Development of the Ambulance Service. Emergency Medicine Journal, 25(6), 2008",
-          "doi": "https://doi.org/10.1097/00063110-199809000-00005",
-          "url": "http://journals.lww.com/00063110-199809000-00005",
+          "doi": null,
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -3893,9 +3893,9 @@
         {
           "citation": "Giesecke, A. & Marsh, N. The Wardian Case. U of Chicago P, 2023",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL1590690W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -4210,8 +4210,8 @@
       "sources": [
         {
           "citation": "Singleton, M. Yoga Body: The Origins of Modern Posture Practice. Oxford UP, 2010",
-          "doi": "https://doi.org/10.18778/1733-8069.7.3.10",
-          "url": "https://czasopisma.uni.lodz.pl/socjak/article/view/12525",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL13775349W",
           "tier": 1,
           "verified": true
         }
@@ -4263,8 +4263,8 @@
       "sources": [
         {
           "citation": "Borden, I. Skateboarding, Space and the City: Architecture and the Body. Berg, 2001",
-          "doi": "https://doi.org/10.1016/s1047-0042(00)80024-0",
-          "url": "http://www.emerald.com/books/edited-volume/11549/chapter/81427641",
+          "doi": "https://doi.org/10.5040/9781474208420",
+          "url": "https://doi.org/10.5040/9781474208420",
           "tier": 1,
           "verified": true
         }
@@ -4581,8 +4581,8 @@
       "sources": [
         {
           "citation": "Taylor, L. Mourning Dress: A Costume and Social History. Allen & Unwin, 1983",
-          "doi": "https://doi.org/10.4324/9780203871324",
-          "url": "https://www.taylorfrancis.com/books/9781135228439",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL18343559W",
           "tier": 1,
           "verified": true
         }
@@ -4687,8 +4687,8 @@
       "sources": [
         {
           "citation": "Tilly, C. & Tarrow, S. Contentious Politics. 2nd ed. Oxford UP, 2015",
-          "doi": "https://doi.org/10.17813/maiq.2.1.2vvn806287165402",
-          "url": "https://mobilization.kglmeridian.com/view/journals/maiq/2/1/article-p87.xml",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL2680227W",
           "tier": 1,
           "verified": true
         }
@@ -4952,8 +4952,8 @@
       "sources": [
         {
           "citation": "Manning, R.D. Credit Card Nation. Basic Books, 2000",
-          "doi": "https://doi.org/10.2307/1556564",
-          "url": "http://www.jstor.org/stable/1556564?origin=crossref",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL16066523W",
           "tier": 1,
           "verified": true
         }
@@ -5270,8 +5270,8 @@
       "sources": [
         {
           "citation": "de Chadarevian, S. Designs for Life: Molecular Biology after World War II. Cambridge UP, 2002",
-          "doi": "https://doi.org/10.1086/376182",
-          "url": "https://www.journals.uchicago.edu/doi/10.1086/376182",
+          "doi": "https://doi.org/10.5860/choice.40-5775",
+          "url": "https://doi.org/10.5860/choice.40-5775",
           "tier": 1,
           "verified": true
         }
@@ -5642,7 +5642,7 @@
         {
           "citation": "Newark, T. Camouflage. Thames & Hudson, 2007",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL24707189W",
+          "url": "https://openlibrary.org/works/OL13671617W",
           "tier": 1,
           "verified": true
         }
@@ -5906,10 +5906,10 @@
       "sources": [
         {
           "citation": "Ackerman, K. The Potential of Urban Agriculture in New York City. Columbia UP, 2012",
-          "doi": "https://doi.org/10.1201/b21180-13",
+          "doi": null,
           "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -6578,8 +6578,8 @@
       "sources": [
         {
           "citation": "Glasmeier, A. Manufacturing Time: Global Competition in the Watch Industry, 1795-2000. Guilford Press, 2000",
-          "doi": "https://doi.org/10.1086/426253",
-          "url": "https://www.journals.uchicago.edu/doi/10.1086/426253",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL20977793W",
           "tier": 1,
           "verified": true
         }
@@ -6761,11 +6761,11 @@
       ],
       "sources": [
         {
-          "citation": "AugÃ©, M. Non-Places: Introduction to an Anthropology of Supermodernity. Verso, 1995",
+          "citation": "Augé, M. Non-Places: Introduction to an Anthropology of Supermodernity. Verso, 1995",
           "doi": null,
           "url": "https://www.academia.edu/39223363/Auge_Marc_Non_Places_Introduction_to_an_Anthropology_of_Supermodernity",
           "tier": 2,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -6808,10 +6808,10 @@
       "sources": [
         {
           "citation": "Hall, P. Cities of Tomorrow (chapter). In: Cities of Tomorrow. Routledge, 2014",
-          "doi": "https://doi.org/10.4324/9781315758367-14",
-          "url": "https://www.taylorfrancis.com/books/9781317635956/chapters/10.4324/9781315758367-14",
+          "doi": null,
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     },
@@ -6853,7 +6853,7 @@
       ],
       "sources": [
         {
-          "citation": "DuprÃ©, R. If It's Yellow, It Must Be Butter: Margarine Regulation in North America since 1886. Journal of Economic History, 59(2), 1999",
+          "citation": "Dupré, R. If It's Yellow, It Must Be Butter: Margarine Regulation in North America since 1886. Journal of Economic History, 59(2), 1999",
           "doi": "https://doi.org/10.1017/s0022050700022865",
           "url": "https://www.cambridge.org/core/journals/journal-of-economic-history/article/abs/if-its-yellow-it-must-be-butter-margarine-regulation-in-north-america-since-1886/B6A3EC99E908B3B57BD5CFEBE49A7C70",
           "tier": 1,
@@ -6899,7 +6899,7 @@
       ],
       "sources": [
         {
-          "citation": "Reissig, C.J., Strain, E.C., & Griffiths, R.R. Caffeinated energy drinks â€” A growing problem. Drug and Alcohol Dependence, 99(1-3), 2009",
+          "citation": "Reissig, C.J., Strain, E.C., & Griffiths, R.R. Caffeinated energy drinks - A growing problem. Drug and Alcohol Dependence, 99(1-3), 2009",
           "doi": "https://doi.org/10.1016/j.drugalcdep.2008.08.001",
           "url": "https://linkinghub.elsevier.com/retrieve/pii/S0376871608002858",
           "tier": 1,
@@ -7497,7 +7497,7 @@
       ],
       "sources": [
         {
-          "citation": "Groom, G. Styleâ€”Fashionâ€”Dress: From Black to Post-Black. Fashion Theory, 14(3), 2010",
+          "citation": "Groom, G. Style-Fashion-Dress: From Black to Post-Black. Fashion Theory, 14(3), 2010",
           "doi": "https://doi.org/10.2752/175174110x12712411520179",
           "url": "https://www.tandfonline.com/doi/full/10.2752/175174110X12712411520179",
           "tier": 1,
@@ -7636,8 +7636,8 @@
       "sources": [
         {
           "citation": "Rissanen, T. & McQuillan, H. Zero Waste Fashion Design. Fairchild Books, 2016",
-          "doi": "https://doi.org/10.1111/fcsr.12255",
-          "url": "https://onlinelibrary.wiley.com/doi/10.1111/fcsr.12255",
+          "doi": null,
+          "url": "https://openlibrary.org/works/OL19762420W",
           "tier": 1,
           "verified": true
         }
@@ -7701,7 +7701,7 @@
           "year_start": 1950,
           "year_end": 1979,
           "context": "Functional athletic wear",
-          "meaning": "Leggings exist primarily as dancewear and athletic garments â€” worn in ballet studios, gymnastics, and aerobics classes. They are functional garments with no fashion cachet outside the exercise context."
+          "meaning": "Leggings exist primarily as dancewear and athletic garments - worn in ballet studios, gymnastics, and aerobics classes. They are functional garments with no fashion cachet outside the exercise context."
         },
         {
           "period": "1980s-1990s",
@@ -7729,9 +7729,9 @@
         {
           "citation": "Mears, A. & Connell, C. The Paradoxical Value of Deviant Cases: Toward a Gendered Theory of Display in Fashion Modeling. Social Forces, 94(2), 2015",
           "doi": null,
-          "url": "https://openlibrary.org/works/OL616702W",
+          "url": null,
           "tier": 1,
-          "verified": true
+          "verified": false
         }
       ]
     }
