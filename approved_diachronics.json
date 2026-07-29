@@ -2,7 +2,7 @@
   "metadata": {
     "title": "Approved Visual Diachronics Corpus",
     "source_file": "dataset/visual_diachronics.json",
-    "generated_at": "2026-07-29T10:20:53",
+    "generated_at": "2026-07-29T10:42:51",
     "status_filter": "approved",
     "entry_count": 148,
     "category_count": 19,
@@ -13,7 +13,7 @@
       "u-shaped": 14,
       "accumulative": 24
     },
-    "note": "Curated build. Topics whose only source was an invalid search link were removed. Remaining topics keep only live, title-verified sources: each source link was checked against the real work at its DOI/URL (via Crossref/OpenLibrary) and corrected or removed where it did not match; unmatched references are shown as citation text without a link. Period descriptions enriched from the source-grounded curation pass where available.",
+    "note": "Curated build. Topics whose only source was an invalid search link were removed. Every remaining source link was verified against the real work at its DOI/URL using scholar APIs (OpenAlex, Semantic Scholar, Crossref, OpenLibrary): mismatched links were corrected to the real work, a few hallucinated author names were fixed from authoritative metadata, and any link that could not be verified was removed (shown as citation text only). Period descriptions enriched from the source-grounded curation pass where available.",
     "sort": "id ascending"
   },
   "entries": [
@@ -362,11 +362,12 @@
           "verified": true
         },
         {
-          "citation": "Matthews, D. et al. The sneaker - marketplace icon. Consumption Markets & Culture, 24(5), 2021",
-          "doi": null,
-          "url": null,
+          "citation": "Denny, I. The sneaker - marketplace icon. Consumption Markets & Culture, 24(5), 2021",
+          "doi": "https://doi.org/10.1080/10253866.2020.1741357",
+          "url": "https://doi.org/10.1080/10253866.2020.1741357",
           "tier": 6,
-          "verified": false
+          "verified": true,
+          "citation_original": "Matthews, D. et al. The sneaker - marketplace icon. Consumption Markets & Culture, 24(5), 2021"
         }
       ]
     },
@@ -582,10 +583,10 @@
         },
         {
           "citation": "Kang, M. & Jones, K. Why Do People Get Tattoos? Contexts, 6(1), 2007",
-          "doi": null,
-          "url": null,
+          "doi": "https://doi.org/10.1525/ctx.2007.6.1.42",
+          "url": "https://doi.org/10.1525/ctx.2007.6.1.42",
           "tier": 1,
-          "verified": false
+          "verified": true
         }
       ]
     },
@@ -688,10 +689,10 @@
       "sources": [
         {
           "citation": "Mears, A. & Connell, C. The Paradoxical Value of Deviant Cases: Toward a Gendered Theory of Display in Fashion Modeling. Social Forces, 94(2), 2015",
-          "doi": null,
-          "url": null,
+          "doi": "https://doi.org/10.1086/682922",
+          "url": "https://doi.org/10.1086/682922",
           "tier": 1,
-          "verified": false
+          "verified": true
         }
       ]
     },
@@ -1133,10 +1134,10 @@
         },
         {
           "citation": "Stark, L. & Crawford, K. The Conservatism of Emoji: Work, Affect, and Communication. Social Media + Society, 1(2), 2015",
-          "doi": null,
-          "url": null,
+          "doi": "https://doi.org/10.1177/2056305115604853",
+          "url": "https://doi.org/10.1177/2056305115604853",
           "tier": 1,
-          "verified": false
+          "verified": true
         }
       ]
     },
@@ -2931,17 +2932,17 @@
       "sources": [
         {
           "citation": "Cohen, J. & Richardson, J. Pit Bull Panic. Journal of Popular Culture, 36(2), 285-317, 2002",
-          "doi": null,
-          "url": null,
+          "doi": "https://doi.org/10.1111/1540-5931.00007",
+          "url": "https://doi.org/10.1111/1540-5931.00007",
           "tier": 1,
-          "verified": false
+          "verified": true
         },
         {
           "citation": "Twining, H., Arluke, A. & Patronek, G. Managing the Stigma of Outlaw Breeds: A Case Study of Pit Bull Owners. Society & Animals, 8(1), 2000",
-          "doi": null,
-          "url": null,
+          "doi": "https://doi.org/10.1163/156853000x00020",
+          "url": "https://doi.org/10.1163/156853000x00020",
           "tier": 1,
-          "verified": false
+          "verified": true
         }
       ]
     },
@@ -3891,11 +3892,12 @@
       ],
       "sources": [
         {
-          "citation": "Giesecke, A. & Marsh, N. The Wardian Case. U of Chicago P, 2023",
-          "doi": null,
-          "url": null,
+          "citation": "Keogh, L. The Wardian Case: How a Simple Box Moved Plants and Changed the World. U of Chicago P, 2020",
+          "doi": "https://doi.org/10.7208/chicago/9780226713755.001.0001",
+          "url": "https://doi.org/10.7208/chicago/9780226713755.001.0001",
           "tier": 1,
-          "verified": false
+          "verified": true,
+          "citation_original": "Giesecke, A. & Marsh, N. The Wardian Case. U of Chicago P, 2023"
         }
       ]
     },
@@ -7728,10 +7730,10 @@
       "sources": [
         {
           "citation": "Mears, A. & Connell, C. The Paradoxical Value of Deviant Cases: Toward a Gendered Theory of Display in Fashion Modeling. Social Forces, 94(2), 2015",
-          "doi": null,
-          "url": null,
+          "doi": "https://doi.org/10.1086/682922",
+          "url": "https://doi.org/10.1086/682922",
           "tier": 1,
-          "verified": false
+          "verified": true
         }
       ]
     }
