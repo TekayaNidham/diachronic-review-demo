@@ -82,7 +82,7 @@ const LIKERT = [
 ];
 function likertLabel(v) { const o = LIKERT.find(x => x.v === Number(v)); return o ? o.label : ''; }
 function likertClass(v) { return 'lv' + Number(v); }
-const YEAR_MIN = 1830, YEAR_MAX = 2030;
+const YEAR_MIN = 1830, YEAR_MAX = 2026;
 function periodDecisions(id) { const r = state.reviews[String(id)]; return (r && r.period_decisions) || {}; }
 function periodRating(id, i) { const v = periodDecisions(id)[i]; return v == null ? null : Number(v); }
 function periodCount(id) { return (displayEntry(id).periods || []).length; }
@@ -647,7 +647,6 @@ function renderSide() {
 function renderSource(source, i, rateable) {
   const meta = [];
   if (source.verified) meta.push('<span class="verified">verified</span>');
-  if (source.tier != null && source.tier !== '') meta.push(`tier ${esc(source.tier)}`);
   if (source.doi) meta.push(`<a href="${esc(source.doi)}" target="_blank" rel="noopener">DOI</a>`);
   if (source.url) meta.push(`<a href="${esc(source.url)}" target="_blank" rel="noopener">link</a>`);
   const v = sourceRating(state.selectedId, i);
@@ -1044,16 +1043,22 @@ function newStudy() {
 /* ============================================================
    GUIDANCE: spotlight tour + non-modal hover tooltips
    ============================================================ */
+/* The tour walks BOTH phases. Explore-phase steps run with a sample topic open in
+   Explore; review-phase steps switch that topic into the guided Review so its real
+   controls can be shown. Original state is snapshotted and restored when the tour ends. */
 const TOUR = [
-  { target: null, title: 'Welcome', body: "Here's a one-minute tour. You explore topics, pick the ones you're confident reviewing, then review your list. You can skip anytime." },
-  { target: '.index', title: 'The corpus', body: 'Every topic (one diachronic) is listed here. Search or filter, click one to open it, and use its checkbox to add it to your review list.' },
-  { target: '.entry-title', title: 'The topic', body: 'The visual element, its category, and how its meaning shifted. Nothing here is rewritten: you are here to judge it.' },
-  { target: '.tl-rail', title: 'Period by period', body: 'Each dot is one period of this topic. In Explore mode, click a dot to read what the element meant then, with no pressure to assess yet.' },
-  { target: '.explore-cta', title: 'Pick, then review', body: 'Add the topics you’re confident reviewing to your list, then press "review my list" to assess them one by one.' },
-  { target: '.mode-switch', title: 'Two modes', body: 'Switch between Explore (browse and pick) and Review (the guided assessment) here at any time.' },
-  { target: '#side', title: 'Sources and notes', body: 'The sources sit here for reference (you rate them for relevance while reviewing), and you can leave user notes for the team.' },
-  { target: '#help-btn', title: 'Need this again?', body: 'Replay this tour anytime from Help, and hover anything for a one-line hint.' },
-  { target: null, title: "You're set", body: "In Review you go period by period: rate each description and confirm its years. A banner under the title asks two yes/no questions about the topic (a ‘no’ rejects it). When your list is done you’re asked if you want to pick more. Happy reviewing." }
+  { phase: 'explore', target: null, title: 'Welcome', body: 'A quick tour. The study has two phases: first you Explore the topics and pick the ones you are confident reviewing, then you Review that list one at a time. You can skip anytime.' },
+  { phase: 'explore', target: '.index', title: 'Phase 1: Explore the corpus', body: 'Every topic (one visual diachronic) is listed here. Search or filter, click one to open it, and use its checkbox to add it to your review list.' },
+  { phase: 'explore', target: '.entry-title', title: 'The topic', body: 'The visual element, its category, and how its meaning shifted over time. Nothing here is rewritten: you are here to judge it.' },
+  { phase: 'explore', target: '.explore-timeline', title: 'Period by period', body: 'The topic is broken into periods. In Explore you simply read what the element meant in each one, with no pressure to assess yet.' },
+  { phase: 'explore', target: '.explore-cta', title: 'Pick, then review', body: 'Add the topics you are confident reviewing to your list, then start the review.' },
+  { phase: 'review', target: '.theme-banner', title: 'Phase 2: Review', body: 'The guided review opens with two yes/no questions about the whole topic: is it genuinely diachronic, and is it important. A "no" to either rejects the topic.' },
+  { phase: 'review', target: '.pf-meaning-wrap', title: 'Read the description', body: 'For each period you read how the element’s meaning is described, then judge it.' },
+  { phase: 'review', target: '.pf-likert', title: 'Rate the description', body: 'Rate how correct that description is, from 1 (incorrect) to 5 (correct). The number keys 1-5 also work.' },
+  { phase: 'review', target: '.pf-years', title: 'Confirm the years', body: 'Adjust the period’s start and end year if they are off: drag the handles, use the minus / plus buttons, or type. This is the only field you can change.' },
+  { phase: 'review', target: '#side', title: 'Sources and notes', body: 'Rate each source for how relevant it is to the topic, and leave notes for the team.' },
+  { phase: 'explore', target: '.mode-switch', title: 'Switch anytime', body: 'Toggle between Explore and Review here at any time. When your review list is done, you are asked whether you want to pick more.' },
+  { phase: 'explore', target: null, title: 'You are set', body: 'That is both phases: explore and pick, then review period by period. You can replay this tour from Help. Happy reviewing.' }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
 function markOnboarded() { try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (_) {} }
@@ -1067,31 +1072,61 @@ function initGuide() {
     const a = b.dataset.guide;
     if (a === 'next') tourAdvance(); else if (a === 'back') tourBack(); else if (a === 'skip') endTour();
   });
-  document.addEventListener('mouseover', onHoverIn);
-  document.addEventListener('mouseout', onHoverOut);
-  document.addEventListener('focusin', e => { if (tour) return; const el = e.target.closest('[data-tip]'); if (el && el !== suppressedEl) showHoverTip(el); });
-  document.addEventListener('focusout', () => { if (!tour) scheduleHide(); });
-  window.addEventListener('scroll', () => { if (tour) layoutStep(); else hideTip(); }, true);
+  // Hover tooltips ("popups") removed: only the guided onboarding tour remains.
+  window.addEventListener('scroll', () => { if (tour) layoutStep(); }, true);
   window.addEventListener('resize', () => { if (tour) layoutStep(); });
-  tipUI.tip.addEventListener('click', onTipClick);
-  tipUI.tip.addEventListener('mouseenter', () => clearTimeout(hideTip.t));
-  tipUI.tip.addEventListener('mouseleave', () => { if (!tour) scheduleHide(); });
 }
 
 /* ---- guided tour ---- */
+function pickTourSample() {
+  // a topic the review flow will actually render (not the completion card): prefer a pending one
+  const pending = state.entries.find(e => topicStatus(e.id) === 'pending');
+  return String((pending || state.entries[0] || {}).id || '');
+}
 function startTour() {
   hideTip();
-  const steps = TOUR.filter(s => !s.target || document.querySelector(s.target));
-  if (!steps.length) return;
-  tour = { steps, i: 0 };
+  if (!state.entries.length) return;
+  const sampleId = pickTourSample();
+  const snap = {
+    mode: state.mode, selection: [...state.selection], selectedId: state.selectedId,
+    reviewStep: state.reviewStep, reviewComplete: state.reviewComplete, reviewEditTheme: state.reviewEditTheme,
+    sampleExisted: !!state.reviews[sampleId]
+  };
+  // open the sample topic in Explore so the explore-phase targets exist for the step filter
+  state.mode = 'explore'; state.reviewComplete = false; state.reviewEditTheme = false;
+  if (sampleId) state.selectedId = sampleId;
+  render();
+  const steps = TOUR.filter(s => s.phase === 'review' || !s.target || document.querySelector(s.target));
+  if (!steps.length) { restoreTourState(snap); return; }
+  tour = { steps, i: 0, snap, sampleId };
   gEls.guide.hidden = false;
   document.body.classList.add('guiding');
   showStep(0);
+}
+/* switch the app into whatever phase the current step needs, on the tour's sample topic */
+function tourEnsurePhase(phase) {
+  if (phase === 'review' && state.mode !== 'review') {
+    state.selectedId = tour.sampleId;
+    startAssessment();                 // enters review + renders the guided flow
+  } else if (phase !== 'review' && state.mode !== 'explore') {
+    state.mode = 'explore'; state.reviewComplete = false; state.reviewEditTheme = false;
+    state.selectedId = tour.sampleId;
+    render();
+  }
+}
+function restoreTourState(snap) {
+  if (!snap) return;
+  // drop the empty review object the tour created for the sample, if it wasn't there before
+  if (!snap.sampleExisted && tour && tour.sampleId) delete state.reviews[tour.sampleId];
+  state.mode = snap.mode; state.selection = snap.selection; state.selectedId = snap.selectedId;
+  state.reviewStep = snap.reviewStep; state.reviewComplete = snap.reviewComplete; state.reviewEditTheme = snap.reviewEditTheme;
+  render(); persist();
 }
 function showStep(i) {
   if (!tour) return;
   tour.i = Math.max(0, Math.min(i, tour.steps.length - 1));
   const step = tour.steps[tour.i];
+  tourEnsurePhase(step.phase);
   const el = step.target ? document.querySelector(step.target) : null;
   gEls.step.textContent = `${tour.i + 1} of ${tour.steps.length}`;
   gEls.title.textContent = step.title;
@@ -1124,7 +1159,12 @@ function layoutStep() {
 }
 function tourAdvance() { if (!tour) return; if (tour.i >= tour.steps.length - 1) endTour(); else showStep(tour.i + 1); }
 function tourBack() { if (tour) showStep(tour.i - 1); }
-function endTour() { tour = null; gEls.guide.hidden = true; document.body.classList.remove('guiding'); markOnboarded(); }
+function endTour() {
+  const snap = tour && tour.snap;
+  gEls.guide.hidden = true; document.body.classList.remove('guiding'); markOnboarded();
+  restoreTourState(snap);      // restore the reviewer's real state (uses tour.sampleId)
+  tour = null;
+}
 
 /* ---- hover tooltips (non-modal, one at a time) ---- */
 function onHoverIn(e) {

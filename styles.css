@@ -136,7 +136,7 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .progress-label{ font-size:.72rem; letter-spacing:.04em; color:var(--muted); white-space:nowrap; }
 .pbar{ flex:1; height:4px; background:var(--surface-alt); border-radius:99px; overflow:hidden; }
 .pbar-fill{ display:block; height:100%; width:0%; background:var(--accent); border-radius:99px; transition:width .6s var(--ease); }
-.top-right{ display:flex; align-items:center; gap:1.1rem; flex:0 0 auto; }
+.top-right{ display:flex; align-items:center; gap:1.1rem; flex:0 0 auto; margin-left:auto; }
 .add-link{ font-size:.82rem; font-weight:500; color:var(--accent); padding:.4rem .8rem; border:1px solid var(--accent); border-radius:99px; transition:all .2s var(--ease); }
 .add-link:hover{ background:var(--accent); color:#fff; transform:translateY(-1px); }
 .save-dot{ display:inline-flex; align-items:center; gap:.4rem; font-size:.68rem; letter-spacing:.03em; color:var(--muted); }

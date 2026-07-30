@@ -2,9 +2,9 @@
   "metadata": {
     "title": "Approved Visual Diachronics Corpus",
     "source_file": "dataset/visual_diachronics.json",
-    "generated_at": "2026-07-29T10:54:58",
+    "generated_at": "2026-07-30T13:55:27",
     "status_filter": "approved",
-    "entry_count": 148,
+    "entry_count": 147,
     "category_count": 19,
     "period_count": 706,
     "shift_counts": {
@@ -819,59 +819,6 @@
           "doi": "https://doi.org/10.7208/chicago/9780226284149.001.0001",
           "url": "https://doi.org/10.7208/chicago/9780226284149.001.0001",
           "tier": 1,
-          "verified": true
-        }
-      ]
-    },
-    {
-      "id": 18,
-      "visual_element": "Swastika",
-      "category": "Symbols & Signs",
-      "shift_type": "linear",
-      "annotation": "Good-luck charm on commercial products to most toxic hate symbol",
-      "periods": [
-        {
-          "period": "1870s-1910s",
-          "year_start": 1870,
-          "year_end": 1919,
-          "context": "Good luck charm",
-          "meaning": "After Schliemann publicized swastika finds from Troy, Western designers adopted the ancient motif as an auspicious ornament. Its appearance on commercial goods, postcards, uniforms, and clubs generally communicated luck or antiquity rather than extremist politics."
-        },
-        {
-          "period": "1920s-1930s",
-          "year_start": 1920,
-          "year_end": 1939,
-          "context": "Nazi appropriation",
-          "meaning": "The Nazi Party's adoption of the swastika in 1920 rapidly overlaid its Western associations with racial nationalism and fascist power. On Nazi flags and propaganda, it became a threatening emblem of the regime and its antisemitic ideology."
-        },
-        {
-          "period": "1940s",
-          "year_start": 1940,
-          "year_end": 1949,
-          "context": "Total toxification",
-          "meaning": "Under the swastika banner, Nazi conquest and genocide fixed the symbol in Western memory as shorthand for the Holocaust, antisemitism, and mass violence. Its earlier good-luck reading became largely unusable in Europe and the Americas."
-        },
-        {
-          "period": "1950s-2000s",
-          "year_start": 1950,
-          "year_end": 2009,
-          "context": "Banned / split meaning",
-          "meaning": "Postwar bans restricted Nazi display in several European countries, while neo-Nazis kept using the emblem to declare white supremacist allegiance. Hindu, Buddhist, and Jain communities continued to display distinct sacred swastikas, preserving a global split in meaning."
-        },
-        {
-          "period": "2010s-2020s",
-          "year_start": 2010,
-          "year_end": 2025,
-          "context": "Contested reclamation",
-          "meaning": "In Western public space, the swastika remains an immediately legible hate symbol, even when extremists alter or code it. Religious communities continue explaining their auspicious versions, so sacred and genocidal readings still coexist across cultural contexts."
-        }
-      ],
-      "sources": [
-        {
-          "citation": "Wikipedia: Swastika. History across cultures and Nazi appropriation",
-          "doi": null,
-          "url": "https://en.wikipedia.org/wiki/Swastika",
-          "tier": 4,
           "verified": true
         }
       ]
