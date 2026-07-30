@@ -546,7 +546,7 @@ function renderReviewComplete(entry) {
     const reason = esc((state.reviews[String(id)] || {}).reject_reason || '');
     return `<div class="assess-complete">
       <div class="ac-mark reject">${X}</div>
-      <div class="ac-title">theme rejected</div>
+      <div class="ac-title">topic rejected</div>
       <div class="ac-sub">you marked this topic as <b>${esc(themeRejectLabel(id))}</b>, so the whole topic is flagged for removal.</div>
       <div class="reject-reason">
         <label for="reject-reason">why? <span>(optional)</span></label>
@@ -558,12 +558,11 @@ function renderReviewComplete(entry) {
       </div>
     </div>`;
   }
-  const vals = Object.values(periodDecisions(id)).map(Number).filter(x => !isNaN(x));
-  const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 5;
-  const reject = mean < 3;
+  // A completed review is always "done" (a green check). The X is reserved for a topic
+  // the reviewer actively rejected by answering "no" to a yes/no question (handled above).
   return `<div class="assess-complete">
-    <div class="ac-mark${reject ? ' reject' : ''}">${reject ? X : CHECK}</div>
-    <div class="ac-title">assessment complete</div>
+    <div class="ac-mark">${CHECK}</div>
+    <div class="ac-title">topic assessed</div>
     <div class="ac-sub">you judged the topic and all ${n} period${n === 1 ? '' : 's'}. your answers are saved.</div>
     <div class="ac-actions">
       <button type="button" class="rv-btn" data-review="revisit">review my answers</button>
