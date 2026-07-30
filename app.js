@@ -1212,11 +1212,20 @@ function onTipClick(e) {
 
 /* ---------- events ---------- */
 function bind() {
+  const anonCheck = $('anon-check');
+  if (anonCheck) anonCheck.addEventListener('change', () => {
+    els.introForm.classList.toggle('anon', anonCheck.checked);
+    els.introStatus.textContent = '';
+  });
   els.introForm.addEventListener('submit', e => {
     e.preventDefault();
-    const first = $('first-name').value.trim(), last = $('last-name').value.trim();
-    if (!first || !last) { els.introStatus.textContent = !first ? 'please enter your first name.' : 'please enter your last name.'; (!first ? $('first-name') : $('last-name')).focus(); return; }
-    state.expert = { first_name: first, last_name: last, expertise_or_credentials: $('expertise').value.trim(), started_at: nowIso() };
+    const anon = !!(anonCheck && anonCheck.checked);
+    const exp = $('expertise').value.trim();
+    let first = $('first-name').value.trim(), last = $('last-name').value.trim();
+    if (!anon && (!first || !last)) { els.introStatus.textContent = !first ? 'please enter your first name.' : 'please enter your last name.'; (!first ? $('first-name') : $('last-name')).focus(); return; }
+    if (!exp) { els.introStatus.textContent = 'please enter your field or credentials.'; $('expertise').focus(); return; }
+    if (anon) { first = 'Anonymous'; last = Math.random().toString(36).slice(2, 6); }
+    state.expert = { first_name: first, last_name: last, anonymous: anon, expertise_or_credentials: exp, started_at: nowIso() };
     state.studyId = `${slug(first)}-${slug(last)}-${Date.now().toString(36)}`;
     document.body.classList.add('leaving');
     setTimeout(() => {
