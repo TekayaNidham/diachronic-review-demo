@@ -1057,6 +1057,8 @@ const TOUR = [
   { phase: 'review', target: '.pf-years', title: 'Confirm the years', body: 'Adjust the period’s start and end year if they are off: drag the handles, use the minus / plus buttons, or type. This is the only field you can change.' },
   { phase: 'review', target: '#side', title: 'Sources and notes', body: 'Rate each source for how relevant it is to the topic, and leave notes for the team.' },
   { phase: 'explore', target: '.mode-switch', title: 'Switch anytime', body: 'Toggle between Explore and Review here at any time. When your review list is done, you are asked whether you want to pick more.' },
+  { phase: 'explore', target: '.menu', title: 'Save and resume', body: 'Your progress is saved automatically in this browser. If you use a private or incognito tab, or a browser that clears its cache, open this menu, download your study file, and load it back later to resume exactly where you left off.' },
+  { phase: 'explore', target: '.menu', title: 'When you are done', body: 'When you have finished, open this menu, download your study file, and email it to nidham.tekaya@ustp.at, or reply with it to the email that included the study guidelines, consent form, and description.' },
   { phase: 'explore', target: null, title: 'You are set', body: 'That is both phases: explore and pick, then review period by period. You can replay this tour from Help. Happy reviewing.' }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
