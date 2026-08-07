@@ -591,7 +591,10 @@ function renderFocus(period, i) {
   const ob = oPeriod.year_end != null ? oPeriod.year_end : b;
   const yrChanged = oa !== a || ob !== b;
   const dots = LIKERT.map(o =>
-    `<button class="likert-dot ${likertClass(o.v)}${o.v === v ? ' on' : ''}" data-likert="${o.v}" title="${esc(o.label)}" aria-label="${esc(o.label)}"><span></span></button>`
+    `<div class="likert-point ${likertClass(o.v)}" data-likert="${o.v}">
+      <button class="likert-dot ${likertClass(o.v)}${o.v === v ? ' on' : ''}" data-likert="${o.v}" aria-label="${esc(o.label)}"><span></span></button>
+      <span class="likert-cap">${esc(o.label)}${o.end ? `<em>${esc(o.end)}</em>` : ''}</span>
+    </div>`
   ).join('');
   return `<div class="period-focus" data-rating="${v || 'pending'}">
     <div class="pf-top">
@@ -622,9 +625,7 @@ function renderFocus(period, i) {
     <div class="pf-likert" data-tip="Rate how correct this description is, from incorrect (delete) to correct (approve). This judges the description above. Keys 1-5 also work.">
       <div class="likert-q">how accurate is this description?</div>
       <div class="likert-row">
-        <span class="likert-anchor left">incorrect<em>delete</em></span>
         <div class="likert-scale"><div class="likert-line"></div>${dots}</div>
-        <span class="likert-anchor right">correct<em>approve</em></span>
       </div>
     </div>
   </div>`;
@@ -1270,7 +1271,7 @@ function bind() {
     if (step) { stepYear(step.dataset.step, Number(step.dataset.dir)); return; }
     const yn = e.target.closest('[data-theme-ans]');
     if (yn) { setThemeAnswer(yn.dataset.themeKey, yn.dataset.themeAns); return; }
-    const dot = e.target.closest('.likert-dot');
+    const dot = e.target.closest('.likert-point, .likert-dot');
     if (dot) { setRating(Number(dot.dataset.likert)); return; }
     const rv = e.target.closest('[data-review]');
     if (rv) { const a = rv.dataset.review; if (a === 'next') reviewNext(); else if (a === 'back') reviewBack(); else if (a === 'revisit') reviewRevisit(); return; }

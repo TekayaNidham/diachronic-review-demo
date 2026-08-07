@@ -309,8 +309,15 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .likert-anchor.left{ text-align:right; color:var(--reject); }
 .likert-anchor.right{ text-align:left; color:var(--approve); }
 .likert-anchor em{ font-style:normal; font-size:.6rem; font-weight:400; opacity:.75; }
-.likert-scale{ position:relative; display:flex; align-items:center; justify-content:space-between; width:min(340px,44vw); }
-.likert-line{ position:absolute; left:14px; right:14px; top:50%; height:3px; transform:translateY(-50%); background:linear-gradient(90deg,#b83a2a,#cf7440,#b7a233,#5a9a52,#2a7d4f); border-radius:99px; opacity:.45; }
+.likert-scale{ position:relative; display:flex; align-items:flex-start; justify-content:space-between; width:min(460px,92%); }
+.likert-line{ position:absolute; left:14px; right:14px; top:14px; height:3px; transform:translateY(-50%); background:linear-gradient(90deg,#b83a2a,#cf7440,#b7a233,#5a9a52,#2a7d4f); border-radius:99px; opacity:.45; }
+.likert-point{ display:flex; flex-direction:column; align-items:center; gap:.4rem; cursor:pointer; --c:#b7a233; }
+.likert-point.lv1{ --c:#b83a2a; } .likert-point.lv2{ --c:#cf7440; } .likert-point.lv3{ --c:#b7a233; } .likert-point.lv4{ --c:#5a9a52; } .likert-point.lv5{ --c:#2a7d4f; }
+.likert-cap{ font-size:.58rem; line-height:1.15; text-align:center; color:var(--muted); font-weight:600; max-width:80px; }
+.likert-cap em{ display:block; font-style:normal; font-weight:400; font-size:.54rem; opacity:.7; }
+.likert-point.lv1 .likert-cap{ color:var(--reject); }
+.likert-point.lv5 .likert-cap{ color:var(--approve); }
+.likert-point:hover .likert-cap{ color:var(--c); }
 .likert-dot{ position:relative; z-index:1; width:28px; height:28px; border-radius:50%; border:1.5px solid var(--surface-alt); background:var(--bg); display:grid; place-items:center; padding:0; transition:transform .14s var(--ease), border-color .14s, background .14s, box-shadow .14s; }
 .likert-dot span{ width:10px; height:10px; border-radius:50%; background:transparent; transition:background .14s; }
 .likert-dot.lv1{ --c:#b83a2a; } .likert-dot.lv2{ --c:#cf7440; } .likert-dot.lv3{ --c:#b7a233; } .likert-dot.lv4{ --c:#5a9a52; } .likert-dot.lv5{ --c:#2a7d4f; }
