@@ -11,6 +11,7 @@ const BACKUP_KEY = 'diachronic_review_backup';
 const FLASH_KEY = 'diachronic_review_flash';
 const ONBOARD_KEY = 'diachronic_review_onboarded';
 const DEFAULT_CORPUS = 'approved_diachronics.json';
+const SUBMIT_EMAIL = 'nidham.tekaya@ustp.at';
 // Where autosaves are POSTed. Adapts to the host:
 //  - a collector you configure (window.REVIEW_SAVE_URL or ?collector=<url>) wins
 //  - on localhost, the local server.py (+ :8000 fallback)
@@ -30,7 +31,8 @@ const state = {
   reviews: {}, suggestions: [], selectedId: null, selectedPeriod: 0, editingComment: null,
   filter: 'all', themeFilter: 'all', search: '',
   mode: 'explore', reviewStep: 0, reviewComplete: false, reviewEditTheme: false,   // explore (read-only) vs review (guided assessment)
-  selection: []   // ids the reviewer picked in explore to review as a batch
+  selection: [],   // ids the reviewer picked in explore to review as a batch
+  lastChangeAt: null, lastDownloadAt: null   // to warn about work not yet downloaded/emailed
 };
 const els = {};
 const saver = { timer: null, inFlight: false, again: false, serverOk: null };
@@ -156,14 +158,22 @@ function snapshot() {
     schema_version: 'diachronic_expert_study_v2', app_version: APP_VERSION, study_id: state.studyId, saved_at: nowIso(),
     expert: state.expert, corpus: { name: DEFAULT_CORPUS, title: state.corpusMeta.title || null, entry_count: state.entries.length },
     counts: counts(), reviews: state.reviews, suggestions: state.suggestions,
+    last_change_at: state.lastChangeAt, last_download_at: state.lastDownloadAt,
     ui: { selectedId: state.selectedId, filter: state.filter, themeFilter: state.themeFilter, search: state.search, mode: state.mode, selection: state.selection }
   };
 }
 function persistLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot())); return true; } catch (e) { console.warn('local save failed', e); return false; } }
 function persist() {
+  state.lastChangeAt = nowIso();
   const ok = persistLocal();
   if (ok) { hideDangerBanner(); setSave('local', saveEndpoints().length ? 'saved' : 'saved in browser'); } else { showDangerBanner(); setSave('error', 'not saved'); }
   scheduleServerSave();
+}
+/* true when there is work that has not been downloaded (and therefore not yet emailed) since the last change */
+function needsDownload() {
+  if (!hasWork()) return false;
+  if (!state.lastDownloadAt) return true;
+  return !state.lastChangeAt || state.lastChangeAt > state.lastDownloadAt;
 }
 function hasWork() {
   const c = counts();
@@ -249,6 +259,8 @@ function applyStudy(data) {
   state.expert = data.expert || state.expert;
   state.reviews = data.reviews || {};
   state.suggestions = data.suggestions || [];
+  state.lastChangeAt = data.last_change_at || null;
+  state.lastDownloadAt = data.last_download_at || null;
   const ui = data.ui || {};
   state.selectedId = ui.selectedId != null ? ui.selectedId : state.selectedId;
   state.filter = ui.filter || 'all'; state.themeFilter = ui.themeFilter || 'all'; state.search = ui.search || '';
@@ -984,6 +996,16 @@ function goNextSelected() {
   if (next) { selectEntry(next); return true; }
   return false;
 }
+/* the "send us your file" step: your work only reaches us when you email the downloaded file */
+function submitCTA() {
+  return `
+    <div class="submit-cta${needsDownload() ? '' : ' downloaded'}">
+      <div class="submit-title">one last step: send us your work</div>
+      <div class="submit-sub">Your answers are saved in this browser, but we only receive them once you send the file. Download it and email it to <a href="mailto:${SUBMIT_EMAIL}?subject=Diachronic%20review%20file">${SUBMIT_EMAIL}</a>, or reply with it to the study email that had the guidelines and consent form.</div>
+      <button type="button" class="rv-btn primary" data-action="download-submit">download my study file</button>
+      <div class="submit-done-note">file downloaded. now attach it to your email to us.</div>
+    </div>`;
+}
 /* "choose the next topic": go to the next picked one, or prompt to pick more when the list is done */
 function goNextTopic() { if (!goNextSelected()) showSelectionDone(); }
 function showSelectionDone() {
@@ -996,6 +1018,21 @@ function showSelectionDone() {
       <div class="ac-actions">
         <button type="button" class="rv-btn primary" data-action="pick-more">yes, pick more ▸</button>
         <button type="button" class="rv-btn" data-action="done-review">no, I'm done</button>
+      </div>
+      ${submitCTA()}
+    </div>`;
+  renderSide();
+}
+/* final screen after "no, I'm done": lead with the send-your-file step */
+function showDone() {
+  els.entry.innerHTML = `
+    <div class="assess-complete">
+      <div class="ac-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M6 12.5l4 4 8-8.5"/></svg></div>
+      <div class="ac-title">thank you for reviewing</div>
+      <div class="ac-sub">your work is saved in this browser. to submit it, send us your file below.</div>
+      ${submitCTA()}
+      <div class="ac-actions">
+        <button type="button" class="rv-btn" data-action="pick-more">back to the topics</button>
       </div>
     </div>`;
   renderSide();
@@ -1014,6 +1051,8 @@ function downloadStudy() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `diachronic_study_${slug(state.expert.last_name)}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  state.lastDownloadAt = nowIso(); persistLocal();
+  const banner = document.querySelector('.submit-cta'); if (banner) banner.classList.add('downloaded');
 }
 async function importStudyFile(file) {
   if (!file) return;
@@ -1362,7 +1401,8 @@ function handleAction(action, el) {
   else if (action === 'clear-list') clearSelection();
   else if (action === 'next-topic') goNextTopic();
   else if (action === 'pick-more') setMode('explore');
-  else if (action === 'done-review') { setMode('explore'); toast('nice work — your picks are saved.'); }
+  else if (action === 'done-review') { state.reviewComplete = false; state.reviewEditTheme = false; showDone(); }
+  else if (action === 'download-submit') { downloadStudy(); toast('downloaded. now attach it to your email to us.'); }
 }
 
 /* ---------- video login background ---------- */
@@ -1413,7 +1453,10 @@ async function init() {
   if (!state.expert) initVideoBg();
   await loadCorpus(); render(); checkFlash(); maybeOnboard(); updateRestoreButton();
   if (state.expert && hasWork()) serverSave();   // re-sync browser -> server whenever the server is reachable
-  window.addEventListener('beforeunload', flushSave);
+  window.addEventListener('beforeunload', e => {
+    flushSave();
+    if (needsDownload()) { e.preventDefault(); e.returnValue = ''; return ''; }   // gentle nudge: work not yet downloaded/emailed
+  });
   window.addEventListener('pagehide', flushSave);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
 }

@@ -498,6 +498,15 @@ body.leaving #intro{ animation:introOut .5s var(--ease) forwards; }
 .ac-title{ font-size:1.5rem; font-weight:400; }
 .ac-sub{ font-size:.92rem; font-weight:300; color:var(--muted); max-width:42ch; line-height:1.5; margin-bottom:1.1rem; }
 .ac-actions{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; }
+/* "send us your file" call to action shown when a review session ends */
+.submit-cta{ width:min(520px,92%); margin:1.4rem auto 0; padding:1.1rem 1.2rem 1.2rem; border:1px solid var(--accent); background:var(--accent-soft); border-radius:var(--radius-sm); text-align:center; }
+.submit-title{ font-size:1rem; font-weight:600; color:var(--accent); margin-bottom:.35rem; }
+.submit-sub{ font-size:.86rem; font-weight:300; color:var(--text); line-height:1.55; max-width:46ch; margin:0 auto 1rem; }
+.submit-sub a{ color:var(--accent); font-weight:500; }
+.submit-cta .rv-btn{ margin:0 auto; }
+.submit-done-note{ display:none; margin-top:.7rem; font-size:.82rem; font-weight:500; color:var(--approve); }
+.submit-cta.downloaded .rv-btn{ opacity:.55; }
+.submit-cta.downloaded .submit-done-note{ display:block; }
 /* optional "why rejected" note on the rejection card */
 .reject-reason{ width:min(440px,90%); text-align:left; margin:.2rem 0 1.1rem; }
 .reject-reason label{ display:block; font-size:.66rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:.4rem; }
