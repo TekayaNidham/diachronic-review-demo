@@ -1019,7 +1019,7 @@ function showSelectionDone() {
         <button type="button" class="rv-btn primary" data-action="pick-more">yes, pick more ▸</button>
         <button type="button" class="rv-btn" data-action="done-review">no, I'm done</button>
       </div>
-      ${submitCTA()}
+      <button type="button" class="ghost-link" data-action="download-submit">fully done? download your file to send us</button>
     </div>`;
   renderSide();
 }
