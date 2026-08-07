@@ -1058,8 +1058,8 @@ const TOUR = [
   { phase: 'review', target: '.pf-years', title: 'Confirm the years', body: 'Adjust the period’s start and end year if they are off: drag the handles, use the minus / plus buttons, or type. This is the only field you can change.' },
   { phase: 'review', target: '#side', title: 'Sources and notes', body: 'Rate each source for how relevant it is to the topic, and leave notes for the team.' },
   { phase: 'explore', target: '.mode-switch', title: 'Switch anytime', body: 'Toggle between Explore and Review here at any time. When your review list is done, you are asked whether you want to pick more.' },
-  { phase: 'explore', target: '.menu', title: 'Save and resume', body: 'Your progress is saved automatically in this browser. If you use a private or incognito tab, or a browser that clears its cache, open this menu, download your study file, and load it back later to resume exactly where you left off.' },
-  { phase: 'explore', target: '.menu', title: 'When you are done', body: 'When you have finished, open this menu, download your study file, and email it to nidham.tekaya@ustp.at, or reply with it to the email that included the study guidelines, consent form, and description.' },
+  { phase: 'explore', target: '.menu-pop', title: 'Save and resume', body: 'Your progress is saved automatically in this browser. If you use a private or incognito tab, or a browser that clears its cache, use "download study file" here and later "load a saved study file" to resume exactly where you left off.' },
+  { phase: 'explore', target: '.menu-pop', title: 'When you are done', body: 'When you have finished, use "download study file" here and email it to nidham.tekaya@ustp.at, or reply with it to the email that included the study guidelines, consent form, and description.' },
   { phase: 'explore', target: null, title: 'You are set', body: 'That is both phases: explore and pick, then review period by period. You can replay this tour from Help. Happy reviewing.' }
 ];
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return false; } }
@@ -1106,6 +1106,11 @@ function startTour() {
   showStep(0);
 }
 /* switch the app into whatever phase the current step needs, on the tour's sample topic */
+function tourSyncMenu(step) {
+  const onMenu = !!(step && step.target === '.menu-pop');
+  if (els.menuPop) els.menuPop.hidden = !onMenu;
+  if (els.menuBtn) els.menuBtn.setAttribute('aria-expanded', String(onMenu));
+}
 function tourEnsurePhase(phase) {
   if (phase === 'review' && state.mode !== 'review') {
     state.selectedId = tour.sampleId;
@@ -1129,6 +1134,7 @@ function showStep(i) {
   tour.i = Math.max(0, Math.min(i, tour.steps.length - 1));
   const step = tour.steps[tour.i];
   tourEnsurePhase(step.phase);
+  tourSyncMenu(step);
   const el = step.target ? document.querySelector(step.target) : null;
   gEls.step.textContent = `${tour.i + 1} of ${tour.steps.length}`;
   gEls.title.textContent = step.title;
@@ -1164,6 +1170,8 @@ function tourBack() { if (tour) showStep(tour.i - 1); }
 function endTour() {
   const snap = tour && tour.snap;
   gEls.guide.hidden = true; document.body.classList.remove('guiding'); markOnboarded();
+  if (els.menuPop) els.menuPop.hidden = true;
+  if (els.menuBtn) els.menuBtn.setAttribute('aria-expanded', 'false');
   restoreTourState(snap);      // restore the reviewer's real state (uses tour.sampleId)
   tour = null;
 }
@@ -1294,9 +1302,10 @@ function bind() {
     const btn = e.target.closest('[data-action]'); if (btn) handleAction(btn.dataset.action, btn);
   });
 
-  els.menuBtn.addEventListener('click', () => { const open = els.menuPop.hidden; els.menuPop.hidden = !open; els.menuBtn.setAttribute('aria-expanded', String(open)); });
-  document.addEventListener('click', e => { if (!els.menuPop.hidden && !e.target.closest('.menu')) els.menuPop.hidden = true; });
+  els.menuBtn.addEventListener('click', () => { if (tour) return; const open = els.menuPop.hidden; els.menuPop.hidden = !open; els.menuBtn.setAttribute('aria-expanded', String(open)); });
+  document.addEventListener('click', e => { if (tour) return; if (!els.menuPop.hidden && !e.target.closest('.menu')) els.menuPop.hidden = true; });
   els.menuPop.addEventListener('click', e => {
+    if (tour) return;
     const b = e.target.closest('[data-menu]'); if (!b) return;
     els.menuPop.hidden = true;
     if (b.dataset.menu === 'download') downloadStudy();
